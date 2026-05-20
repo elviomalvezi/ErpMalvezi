@@ -1,0 +1,67 @@
+# ─── Segredos e ambiente ──────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+.env.prod
+backups/
+
+# ─── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.log
+
+# ─── Node / Angular ───────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dist/
+.angular/
+.nx/cache
+
+# ─── Docker ───────────────────────────────────────────────────────────────────
+# Não ignorar docker-compose.yml — ele vai para o repo
+# Ignorar overrides locais
+docker-compose.override.yml
+
+# ─── IDEs ─────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# ─── SO ───────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Alembic ──────────────────────────────────────────────────────────────────
+# Manter alembic/versions/ no repo; ignorar apenas artefatos temporários
+*.pyc
+
+# ─── Uploads / artefatos gerados ──────────────────────────────────────────────
+backend/uploads/
+*.sqlite3
