@@ -68,7 +68,9 @@ class Veiculo(BaseModel):
     ano_modelo: Mapped[int | None] = mapped_column(Integer, nullable=True)
     cor: Mapped[str | None] = mapped_column(String(50), nullable=True)
     combustivel: Mapped[CombustivelVeiculo | None] = mapped_column(
-        Enum(CombustivelVeiculo, name="combustivel_veiculo", create_type=False), nullable=True
+        Enum(CombustivelVeiculo, name="combustivel_veiculo", create_type=False,
+             values_callable=lambda obj: [e.value for e in obj]),
+        nullable=True,
     )
     valor_aquisicao: Mapped[Decimal] = mapped_column(Numeric(15, 2), nullable=False)
     data_aquisicao: Mapped[date | None] = mapped_column(Date, nullable=True)
@@ -143,6 +145,18 @@ class VeiculoAnexo(BaseModel):
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
     caminho: Mapped[str] = mapped_column(String(500), nullable=False)
     ativo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+class ImovelMatricula(BaseModel):
+    __tablename__ = "imovel_matricula"
+    __table_args__ = (Index("ix_imovel_matricula_imovel", "imovel_id"),)
+
+    imovel_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("imovel.id", ondelete="CASCADE"), nullable=False
+    )
+    numero: Mapped[str] = mapped_column(String(200), nullable=False)
+    descricao: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    principal: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
 
 
 class ImovelAnexo(BaseModel):

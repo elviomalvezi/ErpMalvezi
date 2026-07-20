@@ -59,7 +59,7 @@ class CriarLancamentoRequest(BaseModel):
     tipo: TipoLancamento
     data_competencia: date
     data_vencimento: date
-    categoria_id: uuid.UUID | None = None
+    categoria_id: uuid.UUID
     contato_id: uuid.UUID | None = None
     observacoes: str | None = Field(default=None, max_length=1000)
 

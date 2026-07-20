@@ -52,7 +52,7 @@ class TransferenciaService:
         conta_origem = await self._conta_repo.get_by_id(data.conta_origem_id)
         if conta_origem is None:
             raise NotFoundError("Conta de origem não encontrada.")
-        if conta_origem.usuario_id != usuario_id:
+        if not await self._conta_repo.tem_acesso(data.conta_origem_id, usuario_id):
             raise PermissionDeniedError("Sem acesso à conta de origem.")
         if conta_origem.tipo == TipoConta.CARTAO_CREDITO:
             raise DomainError(
@@ -63,7 +63,7 @@ class TransferenciaService:
         conta_destino = await self._conta_repo.get_by_id(data.conta_destino_id)
         if conta_destino is None:
             raise NotFoundError("Conta de destino não encontrada.")
-        if conta_destino.usuario_id != usuario_id:
+        if not await self._conta_repo.tem_acesso(data.conta_destino_id, usuario_id):
             raise PermissionDeniedError("Sem acesso à conta de destino.")
         if conta_destino.tipo == TipoConta.CARTAO_CREDITO:
             raise DomainError(

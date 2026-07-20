@@ -41,4 +41,6 @@ class Categoria(BaseModel):
     nivel: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=1)
     codigo: Mapped[str | None] = mapped_column(String(20))
     descricao: Mapped[str | None] = mapped_column(Text)
+    exigir_veiculo: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
+    exigir_imovel: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
     ativa: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

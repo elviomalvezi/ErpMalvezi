@@ -18,6 +18,9 @@ class LancamentoCreate(BaseModel):
     contato_id: uuid.UUID | None = None
     conta_bancaria_id: uuid.UUID | None = None
     observacoes: str | None = None
+    tags: list[str] = []
+    veiculo_id: uuid.UUID | None = None
+    imovel_id: uuid.UUID | None = None
 
 
 class LancamentoParceladoCreate(BaseModel):
@@ -32,6 +35,8 @@ class LancamentoParceladoCreate(BaseModel):
     contato_id: uuid.UUID | None = None
     conta_bancaria_id: uuid.UUID | None = None
     observacoes: str | None = None
+    veiculo_id: uuid.UUID | None = None
+    imovel_id: uuid.UUID | None = None
 
 
 class LancamentoRecorrenteCreate(BaseModel):
@@ -47,6 +52,8 @@ class LancamentoRecorrenteCreate(BaseModel):
     contato_id: uuid.UUID | None = None
     conta_bancaria_id: uuid.UUID | None = None
     observacoes: str | None = None
+    veiculo_id: uuid.UUID | None = None
+    imovel_id: uuid.UUID | None = None
 
 
 class LancamentoBaixaCreate(BaseModel):
@@ -64,6 +71,9 @@ class LancamentoUpdate(BaseModel):
     categoria_id: uuid.UUID | None = None
     contato_id: uuid.UUID | None = None
     observacoes: str | None = None
+    tags: list[str] | None = None
+    veiculo_id: uuid.UUID | None = None
+    imovel_id: uuid.UUID | None = None
 
     @model_validator(mode="after")
     def ao_menos_um_campo(self) -> "LancamentoUpdate":
@@ -96,7 +106,11 @@ class LancamentoResponse(BaseModel):
     grupo_parcelas_id: uuid.UUID | None
     recorrencia_id: uuid.UUID | None
     observacoes: str | None
+    tags: list[str] = []
+    veiculo_id: uuid.UUID | None
+    imovel_id: uuid.UUID | None
     ativo: bool
+    tem_anexo: bool = False
 
 
 class LancamentoAnexoResponse(BaseModel):
@@ -109,6 +123,20 @@ class LancamentoAnexoResponse(BaseModel):
     tamanho: int
     mime_type: str
     criado_em: datetime
+
+
+class ExtratoItemResponse(BaseModel):
+    lancamento: LancamentoResponse
+    saldo_apos: Decimal
+
+
+class ExtratoResponse(BaseModel):
+    conta_bancaria_id: uuid.UUID
+    data_inicio: date | None
+    data_fim: date | None
+    saldo_anterior: Decimal
+    saldo_final: Decimal
+    itens: list[ExtratoItemResponse]
 
 
 class ImportacaoMapeamentoPayload(BaseModel):
@@ -149,3 +177,4 @@ class ImportacaoResultadoResponse(BaseModel):
     total_linhas: int
     importadas: int
     ignoradas: int
+    empresas_criadas_importacao: list[str] = []

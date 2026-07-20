@@ -2,13 +2,27 @@ import uuid
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import Select
 
+from app.modules.empresa.models import UsuarioEmpresa
 from app.modules.patrimonio.models import Imovel, StatusImovel, StatusVeiculo, Veiculo
 
 
 class VeiculoRepository:
     def __init__(self, db: AsyncSession) -> None:
         self._db = db
+
+    def _sq_empresas(self, usuario_id: uuid.UUID) -> Select:
+        return select(UsuarioEmpresa.empresa_id).where(UsuarioEmpresa.usuario_id == usuario_id)
+
+    async def tem_acesso(self, veiculo_id: uuid.UUID, usuario_id: uuid.UUID) -> bool:
+        result = await self._db.execute(
+            select(Veiculo.id).where(
+                Veiculo.id == veiculo_id,
+                Veiculo.empresa_id.in_(self._sq_empresas(usuario_id)),
+            )
+        )
+        return result.scalar_one_or_none() is not None
 
     async def listar(
         self,
@@ -17,7 +31,7 @@ class VeiculoRepository:
         status: StatusVeiculo | None = None,
         apenas_ativos: bool = True,
     ) -> list[Veiculo]:
-        stmt = select(Veiculo).where(Veiculo.usuario_id == usuario_id)
+        stmt = select(Veiculo).where(Veiculo.empresa_id.in_(self._sq_empresas(usuario_id)))
         if apenas_ativos:
             stmt = stmt.where(Veiculo.ativo.is_(True))
         if empresa_id:
@@ -46,6 +60,18 @@ class ImovelRepository:
     def __init__(self, db: AsyncSession) -> None:
         self._db = db
 
+    def _sq_empresas(self, usuario_id: uuid.UUID) -> Select:
+        return select(UsuarioEmpresa.empresa_id).where(UsuarioEmpresa.usuario_id == usuario_id)
+
+    async def tem_acesso(self, imovel_id: uuid.UUID, usuario_id: uuid.UUID) -> bool:
+        result = await self._db.execute(
+            select(Imovel.id).where(
+                Imovel.id == imovel_id,
+                Imovel.empresa_id.in_(self._sq_empresas(usuario_id)),
+            )
+        )
+        return result.scalar_one_or_none() is not None
+
     async def listar(
         self,
         usuario_id: uuid.UUID,
@@ -53,7 +79,7 @@ class ImovelRepository:
         status: StatusImovel | None = None,
         apenas_ativos: bool = True,
     ) -> list[Imovel]:
-        stmt = select(Imovel).where(Imovel.usuario_id == usuario_id)
+        stmt = select(Imovel).where(Imovel.empresa_id.in_(self._sq_empresas(usuario_id)))
         if apenas_ativos:
             stmt = stmt.where(Imovel.ativo.is_(True))
         if empresa_id:

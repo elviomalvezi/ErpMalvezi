@@ -5,6 +5,7 @@ from decimal import Decimal
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import Select
 
 from app.modules.conciliacao.models import (
     ImportacaoBancaria,
@@ -12,12 +13,25 @@ from app.modules.conciliacao.models import (
     StatusTransacao,
     TransacaoBancaria,
 )
+from app.modules.empresa.models import UsuarioEmpresa
 from app.modules.lancamento.models import Lancamento, TipoLancamento
 
 
 class ConciliacaoRepository:
     def __init__(self, db: AsyncSession) -> None:
         self._db = db
+
+    def _sq_empresas(self, usuario_id: uuid.UUID) -> Select:
+        return select(UsuarioEmpresa.empresa_id).where(UsuarioEmpresa.usuario_id == usuario_id)
+
+    async def tem_acesso_empresa(self, empresa_id: uuid.UUID, usuario_id: uuid.UUID) -> bool:
+        result = await self._db.execute(
+            select(UsuarioEmpresa.empresa_id).where(
+                UsuarioEmpresa.usuario_id == usuario_id,
+                UsuarioEmpresa.empresa_id == empresa_id,
+            )
+        )
+        return result.scalar_one_or_none() is not None
 
     # --- ImportacaoBancaria ---
 
@@ -36,7 +50,7 @@ class ConciliacaoRepository:
     ) -> list[ImportacaoBancaria]:
         stmt = (
             select(ImportacaoBancaria)
-            .where(ImportacaoBancaria.usuario_id == usuario_id)
+            .where(ImportacaoBancaria.empresa_id.in_(self._sq_empresas(usuario_id)))
             .order_by(ImportacaoBancaria.criado_em.desc())
         )
         if conta_bancaria_id is not None:
@@ -50,6 +64,9 @@ class ConciliacaoRepository:
         for t in transacoes:
             self._db.add(t)
         await self._db.flush()
+
+    async def commit(self) -> None:
+        await self._db.commit()
 
     async def get_transacao(self, transacao_id: uuid.UUID) -> TransacaoBancaria | None:
         return await self._db.get(TransacaoBancaria, transacao_id)

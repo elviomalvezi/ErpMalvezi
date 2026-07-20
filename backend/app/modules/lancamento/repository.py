@@ -1,15 +1,30 @@
 import uuid
 from datetime import date
+from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import Select
 
+from app.modules.empresa.models import UsuarioEmpresa
 from app.modules.lancamento.models import Lancamento, StatusLancamento, TipoLancamento
 
 
 class LancamentoRepository:
     def __init__(self, db: AsyncSession) -> None:
         self._db = db
+
+    def _sq_empresas(self, usuario_id: uuid.UUID) -> Select:
+        return select(UsuarioEmpresa.empresa_id).where(UsuarioEmpresa.usuario_id == usuario_id)
+
+    async def tem_acesso(self, lancamento_id: uuid.UUID, usuario_id: uuid.UUID) -> bool:
+        result = await self._db.execute(
+            select(Lancamento.id).where(
+                Lancamento.id == lancamento_id,
+                Lancamento.empresa_id.in_(self._sq_empresas(usuario_id)),
+            )
+        )
+        return result.scalar_one_or_none() is not None
 
     async def listar(
         self,
@@ -25,8 +40,10 @@ class LancamentoRepository:
         grupo_parcelas_id: uuid.UUID | None = None,
         recorrencia_id: uuid.UUID | None = None,
         apenas_ativos: bool = True,
+        descricao: str | None = None,
+        limit: int | None = None,
     ) -> list[Lancamento]:
-        stmt = select(Lancamento).where(Lancamento.usuario_id == usuario_id)
+        stmt = select(Lancamento).where(Lancamento.empresa_id.in_(self._sq_empresas(usuario_id)))
         if apenas_ativos:
             stmt = stmt.where(Lancamento.ativo.is_(True))
         if empresa_id is not None:
@@ -49,7 +66,69 @@ class LancamentoRepository:
             stmt = stmt.where(Lancamento.grupo_parcelas_id == grupo_parcelas_id)
         if recorrencia_id is not None:
             stmt = stmt.where(Lancamento.recorrencia_id == recorrencia_id)
-        stmt = stmt.order_by(Lancamento.data_vencimento, Lancamento.numero_parcela)
+        if descricao is not None:
+            stmt = stmt.where(Lancamento.descricao.ilike(f"%{descricao}%"))
+        stmt = stmt.order_by(Lancamento.data_vencimento.desc(), Lancamento.numero_parcela)
+        if limit is not None:
+            stmt = stmt.limit(limit)
+        result = await self._db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def saldo_anterior(
+        self,
+        conta_bancaria_id: uuid.UUID,
+        usuario_id: uuid.UUID,
+        ate: date | None,
+        saldo_inicial: Decimal = Decimal("0"),
+        data_saldo_inicial: date | None = None,
+    ) -> Decimal:
+        sq = self._sq_empresas(usuario_id)
+        stmt = select(
+            func.coalesce(
+                func.sum(
+                    case(
+                        (Lancamento.tipo == TipoLancamento.RECEITA, Lancamento.valor_pago),
+                        else_=-Lancamento.valor_pago,
+                    )
+                ),
+                0,
+            )
+        ).where(
+            Lancamento.empresa_id.in_(sq),
+            Lancamento.conta_bancaria_id == conta_bancaria_id,
+            Lancamento.status == StatusLancamento.PAGO,
+            Lancamento.ativo.is_(True),
+        )
+        if data_saldo_inicial is not None:
+            stmt = stmt.where(Lancamento.data_vencimento >= data_saldo_inicial)
+        if ate is not None:
+            stmt = stmt.where(Lancamento.data_vencimento < ate)
+        result = await self._db.execute(stmt)
+        val = result.scalar()
+        movimentos = Decimal(str(val)) if val is not None else Decimal("0")
+        return saldo_inicial + movimentos
+
+    async def listar_extrato(
+        self,
+        conta_bancaria_id: uuid.UUID,
+        usuario_id: uuid.UUID,
+        data_inicio: date | None,
+        data_fim: date | None,
+    ) -> list[Lancamento]:
+        sq = self._sq_empresas(usuario_id)
+        stmt = select(Lancamento).where(
+            Lancamento.empresa_id.in_(sq),
+            Lancamento.conta_bancaria_id == conta_bancaria_id,
+            Lancamento.ativo.is_(True),
+        )
+        if data_inicio is not None:
+            stmt = stmt.where(Lancamento.data_vencimento >= data_inicio)
+        if data_fim is not None:
+            stmt = stmt.where(Lancamento.data_vencimento <= data_fim)
+        stmt = stmt.order_by(
+            func.coalesce(Lancamento.data_pagamento, Lancamento.data_vencimento).asc(),
+            Lancamento.criado_em.asc(),
+        )
         result = await self._db.execute(stmt)
         return list(result.scalars().all())
 

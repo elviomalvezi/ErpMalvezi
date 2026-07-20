@@ -35,4 +35,8 @@ export class CategoriaService {
   inicializarPlanoPadrao(): Observable<{ criadas: number }> {
     return this.http.post<{ criadas: number }>(`${this.base}/plano-padrao`, {});
   }
+
+  merge(origemId: string, destinoId: string): Observable<Categoria> {
+    return this.http.post<Categoria>(`${this.base}/${origemId}/merge/${destinoId}`, {});
+  }
 }

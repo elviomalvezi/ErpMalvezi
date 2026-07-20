@@ -8,7 +8,13 @@ from app.core.database import get_db
 from app.core.deps import CurrentUserId
 from app.core.exceptions import DomainError, NotFoundError, PermissionDeniedError
 from app.modules.contato.repository import ContatoRepository
-from app.modules.contato.schemas import ContatoCreate, ContatoResponse, ContatoUpdate
+from app.modules.contato.cnpj_lookup import consultar_cnpj
+from app.modules.contato.schemas import (
+    ConsultaCnpjResponse,
+    ContatoCreate,
+    ContatoResponse,
+    ContatoUpdate,
+)
 from app.modules.contato.service import ContatoService
 
 router = APIRouter(prefix="/contatos", tags=["contatos"])
@@ -43,6 +49,47 @@ async def listar_contatos(
 ) -> list[ContatoResponse]:
     contatos = await svc.listar(usuario_id, empresa_id, eh_cliente, eh_fornecedor, apenas_ativas)
     return [ContatoResponse.model_validate(c) for c in contatos]
+
+
+@router.get("/verificar-duplicata")
+async def verificar_duplicata(
+    documento: Annotated[str, Query(min_length=11)],
+    usuario_id: CurrentUserId,
+    svc: Annotated[ContatoService, Depends(_svc)],
+    excluir_id: Annotated[uuid.UUID | None, Query()] = None,
+) -> dict:
+    """Verifica se já existe contato ativo com o mesmo CNPJ/CPF (dígitos apenas)."""
+    doc_limpo = "".join(c for c in documento if c.isdigit())
+    contatos = await svc.listar(
+        usuario_id, empresa_id=None, eh_cliente=None, eh_fornecedor=None, apenas_ativas=True
+    )
+    duplicado = next(
+        (
+            c for c in contatos
+            if "".join(d for d in (c.documento or "") if d.isdigit()) == doc_limpo
+            and (excluir_id is None or c.id != excluir_id)
+        ),
+        None,
+    )
+    if duplicado is None:
+        return {"existe": False, "contato": None}
+    return {
+        "existe": True,
+        "contato": ContatoResponse.model_validate(duplicado).model_dump(mode="json"),
+    }
+
+
+@router.get("/consultar-cnpj", response_model=ConsultaCnpjResponse)
+async def consultar_cnpj_route(
+    cnpj: Annotated[str, Query(min_length=14, max_length=18)],
+    _usuario_id: CurrentUserId,
+) -> ConsultaCnpjResponse:
+    """Consulta um CNPJ na BrasilAPI para autopreencher o cadastro de fornecedor."""
+    try:
+        dados = await consultar_cnpj(cnpj)
+    except DomainError as exc:
+        raise _handle_domain(exc) from exc
+    return ConsultaCnpjResponse(**dados)
 
 
 @router.post("", response_model=ContatoResponse, status_code=status.HTTP_201_CREATED)
@@ -109,3 +156,17 @@ async def reativar_contato(
     except DomainError as exc:
         raise _handle_domain(exc) from exc
     return ContatoResponse.model_validate(contato)
+
+
+@router.post("/{contato_id}/merge/{destino_id}", response_model=ContatoResponse)
+async def merge_contatos(
+    contato_id: uuid.UUID,
+    destino_id: uuid.UUID,
+    usuario_id: CurrentUserId,
+    svc: Annotated[ContatoService, Depends(_svc)],
+) -> ContatoResponse:
+    try:
+        destino = await svc.merge(contato_id, destino_id, usuario_id)
+    except DomainError as exc:
+        raise _handle_domain(exc) from exc
+    return ContatoResponse.model_validate(destino)

@@ -9,8 +9,10 @@ import { TagModule } from 'primeng/tag';
 import { ToastModule } from 'primeng/toast';
 import { MessageModule } from 'primeng/message';
 import { TooltipModule } from 'primeng/tooltip';
-import { MessageService } from 'primeng/api';
+import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmDialogModule } from 'primeng/confirmdialog';
 
+import { AuthStore } from '../../core/stores/auth.store';
 import { EmpresaStore } from '../../core/stores/empresa.store';
 import { EmpresaService } from '../../core/services/empresa.service';
 import { EmpresaCreate, EmpresaListItem, EmpresaUpdate, RegimeTributario, TipoPessoa } from '../../core/models';
@@ -18,7 +20,7 @@ import { EmpresaCreate, EmpresaListItem, EmpresaUpdate, RegimeTributario, TipoPe
 @Component({
   selector: 'app-empresas',
   standalone: true,
-  providers: [MessageService],
+  providers: [MessageService, ConfirmationService],
   imports: [
     ReactiveFormsModule,
     TableModule,
@@ -30,9 +32,11 @@ import { EmpresaCreate, EmpresaListItem, EmpresaUpdate, RegimeTributario, TipoPe
     ToastModule,
     MessageModule,
     TooltipModule,
+    ConfirmDialogModule,
   ],
   template: `
     <p-toast />
+    <p-confirmdialog />
 
     <div class="page">
       <div class="page-header">
@@ -101,6 +105,17 @@ import { EmpresaCreate, EmpresaListItem, EmpresaUpdate, RegimeTributario, TipoPe
                   [pTooltip]="e.ativa ? 'Inativar' : 'Reativar'"
                   tooltipPosition="top"
                 />
+                @if (authStore.admin()) {
+                  <p-button
+                    icon="pi pi-trash"
+                    severity="danger"
+                    [text]="true"
+                    size="small"
+                    (onClick)="confirmarExclusao(e)"
+                    pTooltip="Excluir permanentemente"
+                    tooltipPosition="top"
+                  />
+                }
               </div>
             </td>
           </tr>
@@ -122,7 +137,7 @@ import { EmpresaCreate, EmpresaListItem, EmpresaUpdate, RegimeTributario, TipoPe
       (visibleChange)="$event ? dialogVisivel.set(true) : fecharDialog()"
       [modal]="true"
       [style]="{ width: '640px', 'max-width': '95vw' }"
-      [draggable]="false"
+      [draggable]="true"
       [resizable]="false"
     >
       <form [formGroup]="form" class="dialog-form">
@@ -325,7 +340,10 @@ export class EmpresasComponent implements OnInit {
   private readonly empresaStore = inject(EmpresaStore);
   private readonly empresaService = inject(EmpresaService);
   private readonly messageService = inject(MessageService);
+  private readonly confirmationService = inject(ConfirmationService);
   private readonly fb = inject(FormBuilder);
+
+  protected readonly authStore = inject(AuthStore);
 
   protected readonly lista = signal<EmpresaListItem[]>([]);
   protected readonly carregando = signal(false);
@@ -395,11 +413,9 @@ export class EmpresasComponent implements OnInit {
 
   ngOnInit(): void {
     this.form.get('tipo')!.valueChanges.subscribe(() => {
-      if (!this.editandoId()) {
-        this.form.get('documento')?.reset('');
-        if (this.tipoSelecionado === 'PF') {
-          this.form.get('regime_tributario')?.reset(null);
-        }
+      this.form.get('documento')?.reset('');
+      if (this.tipoSelecionado === 'PF') {
+        this.form.get('regime_tributario')?.reset(null);
       }
     });
     this.carregar();
@@ -436,8 +452,6 @@ export class EmpresasComponent implements OnInit {
     this.carregando.set(true);
     this.empresaService.obter(empresa.id).subscribe({
       next: (e) => {
-        this.form.get('tipo')?.disable();
-        this.form.get('documento')?.disable();
         this.form.patchValue({
           tipo: e.tipo,
           documento: e.documento,
@@ -481,12 +495,10 @@ export class EmpresasComponent implements OnInit {
     }
 
     const docDigitos = (v.documento ?? '').replace(/\D/g, '');
-    if (!this.editandoId()) {
-      const tamanhoEsperado = this.tipoSelecionado === 'PJ' ? 14 : 11;
-      if (docDigitos.length !== tamanhoEsperado) {
-        this.formErro.set(`${this.tipoSelecionado === 'PJ' ? 'CNPJ' : 'CPF'} incompleto — informe todos os dígitos.`);
-        return;
-      }
+    const tamanhoEsperado = this.tipoSelecionado === 'PJ' ? 14 : 11;
+    if (docDigitos.length !== tamanhoEsperado) {
+      this.formErro.set(`${this.tipoSelecionado === 'PJ' ? 'CNPJ' : 'CPF'} incompleto — informe todos os dígitos.`);
+      return;
     }
 
     this.salvando.set(true);
@@ -494,6 +506,8 @@ export class EmpresasComponent implements OnInit {
     const id = this.editandoId();
     if (id) {
       const payload: EmpresaUpdate = {
+        tipo: v.tipo as TipoPessoa,
+        documento: docDigitos,
         nome_principal: v.nome_principal ?? undefined,
         nome_alternativo: v.nome_alternativo || null,
         regime_tributario: (v.regime_tributario as RegimeTributario) || null,
@@ -535,6 +549,25 @@ export class EmpresasComponent implements OnInit {
     }
   }
 
+  protected confirmarExclusao(empresa: EmpresaListItem): void {
+    this.confirmationService.confirm({
+      header: 'Excluir empresa',
+      message: `Deseja excluir permanentemente "${empresa.nome_principal}"? Esta ação não pode ser desfeita.`,
+      acceptLabel: 'Excluir',
+      rejectLabel: 'Cancelar',
+      acceptButtonProps: { severity: 'danger' },
+      accept: () => {
+        this.empresaService.excluir(empresa.id).subscribe({
+          next: () => {
+            this.messageService.add({ severity: 'success', summary: 'Sucesso', detail: 'Empresa excluída.' });
+            this.recarregarListas();
+          },
+          error: (err) => this.onErro(err),
+        });
+      },
+    });
+  }
+
   protected toggleAtiva(empresa: EmpresaListItem): void {
     const obs = empresa.ativa
       ? this.empresaService.inativar(empresa.id)
@@ -552,7 +585,8 @@ export class EmpresasComponent implements OnInit {
     });
   }
 
-  protected formatarDocumento(doc: string, tipo: string): string {
+  protected formatarDocumento(doc: string | null, tipo: string): string {
+    if (!doc) return '—';
     const d = doc.replace(/\D/g, '');
     if (tipo === 'PJ' && d.length === 14) {
       return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');

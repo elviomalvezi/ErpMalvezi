@@ -94,12 +94,12 @@ class ImovelCreate(BaseModel):
     bairro: str | None = Field(default=None, max_length=100)
     cidade: str | None = Field(default=None, max_length=100)
     uf: str | None = Field(default=None, max_length=2)
-    area_total: Decimal | None = Field(default=None, gt=0)
-    area_construida: Decimal | None = Field(default=None, gt=0)
+    area_total: Decimal | None = Field(default=None, ge=0)
+    area_construida: Decimal | None = Field(default=None, ge=0)
     valor_aquisicao: Decimal = Field(gt=0)
     data_aquisicao: date | None = None
-    valor_mercado: Decimal | None = Field(default=None, gt=0)
-    valor_venal: Decimal | None = Field(default=None, gt=0)
+    valor_mercado: Decimal | None = Field(default=None, ge=0)
+    valor_venal: Decimal | None = Field(default=None, ge=0)
     observacoes: str | None = None
 
 
@@ -115,12 +115,12 @@ class ImovelUpdate(BaseModel):
     bairro: str | None = Field(default=None, max_length=100)
     cidade: str | None = Field(default=None, max_length=100)
     uf: str | None = Field(default=None, max_length=2)
-    area_total: Decimal | None = Field(default=None, gt=0)
-    area_construida: Decimal | None = Field(default=None, gt=0)
+    area_total: Decimal | None = Field(default=None, ge=0)
+    area_construida: Decimal | None = Field(default=None, ge=0)
     valor_aquisicao: Decimal | None = Field(default=None, gt=0)
     data_aquisicao: date | None = None
-    valor_mercado: Decimal | None = Field(default=None, gt=0)
-    valor_venal: Decimal | None = Field(default=None, gt=0)
+    valor_mercado: Decimal | None = Field(default=None, ge=0)
+    valor_venal: Decimal | None = Field(default=None, ge=0)
     status: StatusImovel | None = None
     observacoes: str | None = None
 

@@ -3,7 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
-import { DashboardResponse } from '../models';
+import { DashboardResponse, GraficosResponse } from '../models';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardService {
@@ -21,5 +21,19 @@ export class DashboardService {
       .set('data_referencia', dataReferencia);
     if (empresaId) params = params.set('empresa_id', empresaId);
     return this.http.get<DashboardResponse>(`${environment.apiUrl}/dashboard`, { params });
+  }
+
+  graficos(
+    dataInicio: string,
+    dataFim: string,
+    dataReferencia: string,
+    empresaId?: string,
+  ): Observable<GraficosResponse> {
+    let params = new HttpParams()
+      .set('data_inicio', dataInicio)
+      .set('data_fim', dataFim)
+      .set('data_referencia', dataReferencia);
+    if (empresaId) params = params.set('empresa_id', empresaId);
+    return this.http.get<GraficosResponse>(`${environment.apiUrl}/dashboard/graficos`, { params });
   }
 }

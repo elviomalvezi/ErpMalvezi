@@ -154,7 +154,7 @@ type FiltroTipo = 'TODOS' | 'CONTAS' | 'CARTOES';
       (visibleChange)="$event ? dialogVisivel.set(true) : fecharDialog()"
       [modal]="true"
       [style]="{ width: '560px', 'max-width': '95vw' }"
-      [draggable]="false"
+      [draggable]="true"
       [resizable]="false"
     >
       <form [formGroup]="form" class="dialog-form">

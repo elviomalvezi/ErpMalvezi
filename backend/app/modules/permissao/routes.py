@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.deps import RequireAdmin
+from app.core.deps import RequireAdmin, RequireAdminOrGestor
 from app.core.exceptions import DomainError, NotFoundError
 from app.modules.permissao.repository import PermissaoRepository
 from app.modules.permissao.schemas import (
@@ -35,7 +35,7 @@ def _handle_domain(exc: DomainError) -> HTTPException:
 
 @router.get("/menus", response_model=list[MenuResponse])
 async def listar_menus(
-    _: RequireAdmin,
+    _: RequireAdminOrGestor,
     svc: Annotated[PermissaoService, Depends(_svc)],
 ) -> list[MenuResponse]:
     menus = await svc._repo.listar_menus()
@@ -44,7 +44,7 @@ async def listar_menus(
 
 @router.get("/acoes", response_model=list[AcaoResponse])
 async def listar_acoes(
-    _: RequireAdmin,
+    _: RequireAdminOrGestor,
     svc: Annotated[PermissaoService, Depends(_svc)],
 ) -> list[AcaoResponse]:
     acoes = await svc._repo.listar_acoes()
@@ -54,7 +54,7 @@ async def listar_acoes(
 @router.get("/usuarios/{usuario_id}", response_model=UsuarioPermissoesResponse)
 async def listar_permissoes_usuario(
     usuario_id: uuid.UUID,
-    _: RequireAdmin,
+    _: RequireAdminOrGestor,
     svc: Annotated[PermissaoService, Depends(_svc)],
 ) -> UsuarioPermissoesResponse:
     try:
@@ -71,7 +71,7 @@ async def listar_permissoes_usuario(
 async def conceder_permissoes(
     usuario_id: uuid.UUID,
     data: ConcederPermissoesRequest,
-    admin_id: RequireAdmin,
+    admin_id: RequireAdminOrGestor,
     svc: Annotated[PermissaoService, Depends(_svc)],
 ) -> list[PermissaoMatrizItem]:
     try:
@@ -84,7 +84,7 @@ async def conceder_permissoes(
 async def substituir_permissoes(
     usuario_id: uuid.UUID,
     data: ConcederPermissoesRequest,
-    admin_id: RequireAdmin,
+    admin_id: RequireAdminOrGestor,
     svc: Annotated[PermissaoService, Depends(_svc)],
 ) -> list[PermissaoMatrizItem]:
     try:
@@ -97,7 +97,7 @@ async def substituir_permissoes(
 async def revogar_permissao(
     usuario_id: uuid.UUID,
     permissao_id: uuid.UUID,
-    admin_id: RequireAdmin,
+    admin_id: RequireAdminOrGestor,
     svc: Annotated[PermissaoService, Depends(_svc)],
 ) -> None:
     try:

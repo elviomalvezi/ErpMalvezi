@@ -27,7 +27,7 @@ class VeiculoService:
         v = await self._repo.get_by_id(veiculo_id)
         if v is None:
             raise NotFoundError("Veículo não encontrado.")
-        if v.usuario_id != usuario_id:
+        if not await self._repo.tem_acesso(veiculo_id, usuario_id):
             raise PermissionDeniedError("Sem acesso a este veículo.")
         return v
 
@@ -103,7 +103,7 @@ class ImovelService:
         i = await self._repo.get_by_id(imovel_id)
         if i is None:
             raise NotFoundError("Imóvel não encontrado.")
-        if i.usuario_id != usuario_id:
+        if not await self._repo.tem_acesso(imovel_id, usuario_id):
             raise PermissionDeniedError("Sem acesso a este imóvel.")
         return i
 

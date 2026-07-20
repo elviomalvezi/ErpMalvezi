@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.deps import CurrentJti, CurrentUserId, RequireAdmin
+from app.core.deps import CurrentJti, CurrentUserId, RequireAdmin, RequireAdminOrGestor
 from app.core.exceptions import ConflictError, DomainError, NotFoundError
 from app.modules.usuario.repository import UsuarioRepository
 from app.modules.usuario.schemas import (
@@ -87,7 +87,7 @@ async def definir_senha(
 @router_usuarios.post("", response_model=UsuarioResponse, status_code=status.HTTP_201_CREATED)
 async def criar_usuario(
     data: UsuarioCreate,
-    usuario_id: CurrentUserId,
+    usuario_id: RequireAdminOrGestor,
     svc: Annotated[UsuarioService, Depends(_svc)],
 ) -> UsuarioResponse:
     try:
@@ -136,7 +136,7 @@ async def alterar_senha(
 
 @router_usuarios.get("", response_model=list[UsuarioResponse])
 async def listar_usuarios(
-    _admin: RequireAdmin,
+    _: RequireAdminOrGestor,
     svc: Annotated[UsuarioService, Depends(_svc)],
 ) -> list[UsuarioResponse]:
     usuarios = await svc.listar_usuarios()
@@ -146,7 +146,7 @@ async def listar_usuarios(
 @router_usuarios.patch("/{usuario_id}/inativar", response_model=UsuarioResponse)
 async def inativar_usuario(
     usuario_id: uuid.UUID,
-    admin_id: RequireAdmin,
+    admin_id: RequireAdminOrGestor,
     svc: Annotated[UsuarioService, Depends(_svc)],
 ) -> UsuarioResponse:
     try:
@@ -159,7 +159,7 @@ async def inativar_usuario(
 @router_usuarios.patch("/{usuario_id}/reativar", response_model=UsuarioResponse)
 async def reativar_usuario(
     usuario_id: uuid.UUID,
-    _admin: RequireAdmin,
+    _: RequireAdminOrGestor,
     svc: Annotated[UsuarioService, Depends(_svc)],
 ) -> UsuarioResponse:
     try:
@@ -169,10 +169,23 @@ async def reativar_usuario(
     return UsuarioResponse.model_validate(usuario)
 
 
+@router_usuarios.patch("/{usuario_id}/gestor", response_model=UsuarioResponse)
+async def toggle_gestor(
+    usuario_id: uuid.UUID,
+    admin_id: RequireAdmin,
+    svc: Annotated[UsuarioService, Depends(_svc)],
+) -> UsuarioResponse:
+    try:
+        usuario = await svc.toggle_gestor(usuario_id, admin_id)
+    except DomainError as exc:
+        raise _handle_domain(exc) from exc
+    return UsuarioResponse.model_validate(usuario)
+
+
 @router_usuarios.get("/{usuario_id}", response_model=UsuarioResponse)
 async def obter_usuario(
     usuario_id: uuid.UUID,
-    _current: CurrentUserId,
+    _admin: RequireAdminOrGestor,
     svc: Annotated[UsuarioService, Depends(_svc)],
 ) -> UsuarioResponse:
     try:

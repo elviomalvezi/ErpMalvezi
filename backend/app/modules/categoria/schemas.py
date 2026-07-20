@@ -13,6 +13,8 @@ class CategoriaCreate(BaseModel):
     empresa_id: uuid.UUID | None = None
     codigo: str | None = Field(default=None, max_length=20)
     descricao: str | None = None
+    exigir_veiculo: bool = False
+    exigir_imovel: bool = False
 
     @model_validator(mode="after")
     def validate_escopo_empresa(self) -> "CategoriaCreate":
@@ -28,6 +30,8 @@ class CategoriaUpdate(BaseModel):
     parent_id: uuid.UUID | None = Field(default=None)
     codigo: str | None = Field(default=None, max_length=20)
     descricao: str | None = None
+    exigir_veiculo: bool | None = None
+    exigir_imovel: bool | None = None
 
 
 class CategoriaResponse(BaseModel):
@@ -43,6 +47,8 @@ class CategoriaResponse(BaseModel):
     nivel: int
     codigo: str | None
     descricao: str | None
+    exigir_veiculo: bool
+    exigir_imovel: bool
     ativa: bool
 
 
@@ -56,5 +62,7 @@ class CategoriaTreeNode(BaseModel):
     escopo: str
     nivel: int
     codigo: str | None
+    exigir_veiculo: bool
+    exigir_imovel: bool
     ativa: bool
     filhos: list["CategoriaTreeNode"] = []

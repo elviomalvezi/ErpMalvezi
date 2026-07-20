@@ -3,6 +3,7 @@ import { CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
+import { DatePickerModule } from 'primeng/datepicker';
 import { TableModule } from 'primeng/table';
 import { DialogModule } from 'primeng/dialog';
 import { SelectModule } from 'primeng/select';
@@ -28,7 +29,7 @@ const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
   providers: [ConfirmationService, MessageService],
   imports: [
     FormsModule, CurrencyPipe, DatePipe,
-    ButtonModule, TableModule, DialogModule, SelectModule,
+    ButtonModule, DatePickerModule, TableModule, DialogModule, SelectModule,
     InputTextModule, InputNumberModule, TagModule,
     ToastModule, ConfirmPopupModule, TooltipModule, TextareaModule,
   ],
@@ -36,6 +37,12 @@ const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
 <p-toast />
 <p-confirmpopup />
 
+@if (!empresaAtiva()) {
+  <div class="sem-empresa">
+    <i class="pi pi-building sem-empresa-icon"></i>
+    <p>Selecione uma empresa no topo da tela para acessar as transferências.</p>
+  </div>
+} @else {
 <div class="page">
   <div class="page-header">
     <h1 class="page-title">
@@ -46,7 +53,16 @@ const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
       <div class="mes-nav">
         <p-button icon="pi pi-chevron-left" [text]="true" [rounded]="true" size="small"
           (onClick)="navegar(-1)" />
-        <span class="mes-label">{{ labelMes() }}</span>
+        <p-datepicker
+          [ngModel]="mesRef()"
+          (onSelect)="selecionarMes($event)"
+          view="month"
+          dateFormat="MM/yy"
+          [readonlyInput]="true"
+          [showIcon]="true"
+          icon="pi pi-calendar"
+          placeholder="Selecione o mês"
+        />
         <p-button icon="pi pi-chevron-right" [text]="true" [rounded]="true" size="small"
           (onClick)="navegar(1)" />
       </div>
@@ -115,7 +131,7 @@ const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
 
 <!-- Dialog: Nova Transferência -->
 <p-dialog [visible]="dialogVisivel()" (onHide)="fecharDialog()" header="Nova Transferência" [modal]="true"
-  [style]="{width:'540px'}" [draggable]="false">
+  [style]="{width:'540px'}" [draggable]="true">
   <div class="form-grid">
     <div class="form-section-title">
       <i class="pi pi-arrow-circle-up"></i> Origem
@@ -185,8 +201,11 @@ const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
     <p-button label="Transferir" icon="pi pi-arrows-h" [loading]="salvando()" (onClick)="salvar()" />
   </ng-template>
 </p-dialog>
+} <!-- fecha @else -->
   `,
   styles: [`
+    .sem-empresa { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; color: var(--p-surface-400); text-align: center; }
+    .sem-empresa-icon { font-size: 3rem; margin-bottom: 1rem; }
     .page { padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
     .page-header { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
     .page-title { margin: 0; font-size: 1.4rem; font-weight: 700; flex: 1;
@@ -223,6 +242,7 @@ const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho',
 })
 export class TransferenciasComponent implements OnInit {
   protected readonly empresaStore = inject(EmpresaStore);
+  protected readonly empresaAtiva = computed(() => this.empresaStore.empresaAtiva());
   private readonly contaSvc = inject(ContaBancariaService);
   private readonly transferencSvc = inject(TransferenciaService);
   private readonly confirmSvc = inject(ConfirmationService);
@@ -266,6 +286,7 @@ export class TransferenciasComponent implements OnInit {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   });
   protected readonly labelMes = computed(() => `${MESES[this.mes()]} ${this.ano()}`);
+  protected readonly mesRef = computed(() => new Date(this.ano(), this.mes(), 1));
 
   private readonly nomeEmpresaMap = computed(() => {
     const map = new Map<string, string>();
@@ -292,6 +313,12 @@ export class TransferenciasComponent implements OnInit {
 
   ngOnInit(): void {
     this.contaSvc.listar().subscribe(c => this.contas.set(c));
+    this.pesquisar();
+  }
+
+  protected selecionarMes(data: Date): void {
+    this.mes.set(data.getMonth());
+    this.ano.set(data.getFullYear());
     this.pesquisar();
   }
 

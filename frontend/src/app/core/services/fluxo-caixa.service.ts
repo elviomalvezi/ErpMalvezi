@@ -13,13 +13,13 @@ export class FluxoCaixaService {
   obter(opts: {
     dataInicio: string;
     dataFim: string;
-    empresaId?: string | null;
+    empresaIds?: string[];
     contaBancariaId?: string | null;
   }): Observable<FluxoCaixaResponse> {
     let params = new HttpParams()
       .set('data_inicio', opts.dataInicio)
       .set('data_fim', opts.dataFim);
-    if (opts.empresaId) params = params.set('empresa_id', opts.empresaId);
+    (opts.empresaIds ?? []).forEach(id => params = params.append('empresa_ids', id));
     if (opts.contaBancariaId) params = params.set('conta_bancaria_id', opts.contaBancariaId);
     return this.http.get<FluxoCaixaResponse>(this.base, { params });
   }

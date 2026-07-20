@@ -4,13 +4,27 @@ from decimal import Decimal
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import Select
 
+from app.modules.empresa.models import UsuarioEmpresa
 from app.modules.fatura.models import Fatura, StatusFatura
 
 
 class FaturaRepository:
     def __init__(self, db: AsyncSession) -> None:
         self._db = db
+
+    def _sq_empresas(self, usuario_id: uuid.UUID) -> Select:
+        return select(UsuarioEmpresa.empresa_id).where(UsuarioEmpresa.usuario_id == usuario_id)
+
+    async def tem_acesso(self, fatura_id: uuid.UUID, usuario_id: uuid.UUID) -> bool:
+        result = await self._db.execute(
+            select(Fatura.id).where(
+                Fatura.id == fatura_id,
+                Fatura.empresa_id.in_(self._sq_empresas(usuario_id)),
+            )
+        )
+        return result.scalar_one_or_none() is not None
 
     async def listar(
         self,
@@ -21,7 +35,7 @@ class FaturaRepository:
         competencia_inicio: date | None = None,
         competencia_fim: date | None = None,
     ) -> list[Fatura]:
-        stmt = select(Fatura).where(Fatura.usuario_id == usuario_id)
+        stmt = select(Fatura).where(Fatura.empresa_id.in_(self._sq_empresas(usuario_id)))
         if conta_bancaria_id is not None:
             stmt = stmt.where(Fatura.conta_bancaria_id == conta_bancaria_id)
         if empresa_id is not None:
@@ -52,6 +66,12 @@ class FaturaRepository:
     async def create(self, fatura: Fatura) -> None:
         self._db.add(fatura)
         await self._db.flush()
+
+    async def commit(self) -> None:
+        await self._db.commit()
+
+    async def refresh(self, obj: Fatura) -> None:
+        await self._db.refresh(obj)
 
     async def delta_valor_total(self, fatura_id: uuid.UUID, delta: Decimal) -> None:
         """Incrementa (ou decrementa se negativo) o valor_total atomicamente."""

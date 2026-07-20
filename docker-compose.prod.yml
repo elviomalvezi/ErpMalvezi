@@ -63,6 +63,10 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      # Certificado wildcard *.gtexbrasil.ind.br (fora do repo, na VM).
+      - ./certs:/etc/nginx/certs:ro
     depends_on:
       - backend
 

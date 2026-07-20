@@ -26,11 +26,23 @@ export class EmpresaService {
     return this.http.put<EmpresaResponse>(`${this.base}/${id}`, data);
   }
 
+  excluir(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${id}`);
+  }
+
   inativar(id: string): Observable<EmpresaResponse> {
     return this.http.patch<EmpresaResponse>(`${this.base}/${id}/inativar`, {});
   }
 
   reativar(id: string): Observable<EmpresaResponse> {
     return this.http.patch<EmpresaResponse>(`${this.base}/${id}/reativar`, {});
+  }
+
+  listarEmpresasUsuario(usuarioId: string): Observable<string[]> {
+    return this.http.get<string[]>(`${this.base}/usuario/${usuarioId}/empresas`);
+  }
+
+  definirEmpresasUsuario(usuarioId: string, empresaIds: string[]): Observable<string[]> {
+    return this.http.put<string[]>(`${this.base}/usuario/${usuarioId}/empresas`, empresaIds);
   }
 }

@@ -26,7 +26,7 @@ async def obter_fluxo_caixa(
     svc: Annotated[FluxoCaixaService, Depends(_svc)],
     data_inicio: Annotated[date, Query()],
     data_fim: Annotated[date, Query()],
-    empresa_id: Annotated[uuid.UUID | None, Query()] = None,
+    empresa_ids: Annotated[list[uuid.UUID], Query()] = [],
     conta_bancaria_id: Annotated[uuid.UUID | None, Query()] = None,
 ) -> FluxoCaixaResponse:
-    return await svc.obter(usuario_id, data_inicio, data_fim, empresa_id, conta_bancaria_id)
+    return await svc.obter(usuario_id, data_inicio, data_fim, empresa_ids or None, conta_bancaria_id)

@@ -1,4 +1,5 @@
 import { computed, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { signalStore, withState, withComputed, withMethods, patchState } from '@ngrx/signals';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
 import { pipe, switchMap, tap } from 'rxjs';
@@ -10,7 +11,7 @@ export type Empresa = {
   id: string;
   nome: string;
   tipo: 'PJ' | 'PF';
-  documento: string;
+  documento: string | null;
 };
 
 interface EmpresaState {
@@ -46,7 +47,7 @@ export const EmpresaStore = signalStore(
           : [],
     ),
   })),
-  withMethods((store, empresaService = inject(EmpresaService)) => ({
+  withMethods((store, empresaService = inject(EmpresaService), router = inject(Router)) => ({
     carregar: rxMethod<void>(
       pipe(
         tap(() => patchState(store, { carregando: true })),
@@ -60,9 +61,13 @@ export const EmpresaStore = signalStore(
     ),
     selecionarEmpresa(empresa: Empresa): void {
       patchState(store, { empresaAtiva: empresa });
+      router.navigate(['/dashboard']);
     },
     toggleModoSimultaneo(): void {
       patchState(store, { modoSimultaneo: !store.modoSimultaneo() });
+    },
+    popular(lista: Empresa[]): void {
+      patchState(store, { empresas: lista });
     },
     limpar(): void {
       patchState(store, { empresas: [], empresaAtiva: null });

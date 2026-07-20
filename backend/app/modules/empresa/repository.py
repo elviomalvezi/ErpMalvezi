@@ -24,16 +24,21 @@ class EmpresaRepository:
         return result.scalar_one_or_none()
 
     async def get_by_nome(self, nome: str, usuario_id: uuid.UUID) -> Empresa | None:
-        result = await self.db.execute(
-            select(Empresa)
-            .join(UsuarioEmpresa, UsuarioEmpresa.empresa_id == Empresa.id)
-            .where(
-                UsuarioEmpresa.usuario_id == usuario_id,
-                Empresa.nome_principal.ilike(nome),
+        # Tenta match exato (case-insensitive) primeiro, depois parcial
+        for pattern in (nome, f"%{nome}%"):
+            result = await self.db.execute(
+                select(Empresa)
+                .join(UsuarioEmpresa, UsuarioEmpresa.empresa_id == Empresa.id)
+                .where(
+                    UsuarioEmpresa.usuario_id == usuario_id,
+                    Empresa.nome_principal.ilike(pattern),
+                )
+                .limit(1)
             )
-            .limit(1)
-        )
-        return result.scalar_one_or_none()
+            empresa = result.scalar_one_or_none()
+            if empresa is not None:
+                return empresa
+        return None
 
     async def list_by_usuario(self, usuario_id: uuid.UUID) -> Sequence[Empresa]:
         result = await self.db.execute(
@@ -56,10 +61,14 @@ class EmpresaRepository:
         return vinculo
 
     async def has_lancamentos(self, empresa_id: uuid.UUID) -> bool:
-        """Verifica se a empresa possui lançamentos (impede mudança de tipo e exclusão)."""
-        # Tabela lancamento ainda não existe no módulo 1 — retorna False por enquanto.
-        # Será substituído quando o módulo 9 for implementado.
-        return False
+        """Verifica se a empresa possui lançamentos (impede exclusão definitiva)."""
+        from sqlalchemy import func
+        from app.modules.lancamento.models import Lancamento
+
+        result = await self.db.execute(
+            select(func.count()).select_from(Lancamento).where(Lancamento.empresa_id == empresa_id)
+        )
+        return (result.scalar() or 0) > 0
 
     async def get_vinculo(
         self, usuario_id: uuid.UUID, empresa_id: uuid.UUID

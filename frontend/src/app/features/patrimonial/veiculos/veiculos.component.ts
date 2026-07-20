@@ -19,7 +19,7 @@ import { TooltipModule } from 'primeng/tooltip';
 import { EmpresaStore } from '../../../core/stores/empresa.store';
 import { PatrimonioService } from '../../../core/services/patrimonio.service';
 import { AnexosPanelComponent } from '../../../shared/components/anexos-panel/anexos-panel.component';
-import type { CombustivelVeiculo, StatusVeiculo, Veiculo, VeiculoCreate, VeiculoUpdate } from '../../../core/models';
+import type { CombustivelVeiculo, Lancamento, StatusVeiculo, Veiculo, VeiculoCreate, VeiculoUpdate } from '../../../core/models';
 
 type FiltroStatus = 'TODOS' | StatusVeiculo;
 
@@ -243,6 +243,30 @@ type FiltroStatus = 'TODOS' | StatusVeiculo;
         [deletarFn]="deletarAnexo"
         [downloadUrlFn]="downloadUrl"
       />
+
+      <p-divider />
+      <div class="form-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+          <h4 class="form-section-title" style="margin:0">Lançamentos Vinculados</h4>
+          @if (carregandoLancamentos()) {
+            <i class="pi pi-spin pi-spinner" style="font-size:0.85rem;color:var(--p-surface-400)"></i>
+          }
+        </div>
+        @if (lancamentosVeiculo().length === 0) {
+          <p class="lancamentos-vazio">Nenhum lançamento vinculado a este veículo.</p>
+        } @else {
+          <div class="lancamentos-lista">
+            @for (lct of lancamentosVeiculo(); track lct.id) {
+              <div class="lancamento-item" [class.lct-pago]="lct.status === 'pago'" [class.lct-cancelado]="lct.status === 'cancelado'">
+                <span class="lct-data">{{ formatData(lct.data_vencimento) }}</span>
+                <span class="lct-desc">{{ lct.descricao }}</span>
+                <span class="lct-valor" [class.lct-receita]="lct.tipo === 'RECEITA'">{{ formatMoeda(lct.valor) }}</span>
+                <span class="lct-status">{{ lct.status }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
     }
 
     <div class="dialog-footer">
@@ -274,6 +298,16 @@ type FiltroStatus = 'TODOS' | StatusVeiculo;
     .field.full { grid-column: 1 / -1; }
     label { font-size: 0.875rem; font-weight: 500; }
     .dialog-footer { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--p-surface-200); }
+    .lancamentos-vazio { font-size: 0.85rem; color: var(--p-surface-400); margin: 0; }
+    .lancamentos-lista { display: flex; flex-direction: column; gap: 0.25rem; max-height: 200px; overflow-y: auto; }
+    .lancamento-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid var(--p-surface-200); font-size: 0.82rem; }
+    .lancamento-item.lct-pago { opacity: 0.7; }
+    .lancamento-item.lct-cancelado { opacity: 0.45; text-decoration: line-through; }
+    .lct-data { color: var(--p-surface-500); white-space: nowrap; min-width: 70px; }
+    .lct-desc { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lct-valor { white-space: nowrap; font-weight: 600; }
+    .lct-receita { color: var(--p-green-600); }
+    .lct-status { font-size: 0.75rem; color: var(--p-surface-400); white-space: nowrap; }
   `],
 })
 export class VeiculosComponent {
@@ -291,6 +325,8 @@ export class VeiculosComponent {
   protected readonly mostrarInativos = signal(false);
   protected readonly dialogVisivel = signal(false);
   protected readonly editandoId = signal<string | null>(null);
+  protected readonly lancamentosVeiculo = signal<Lancamento[]>([]);
+  protected readonly carregandoLancamentos = signal(false);
 
   protected readonly listaFiltrada = computed(() => {
     const status = this.filtroStatus();
@@ -383,6 +419,7 @@ export class VeiculosComponent {
 
   protected abrirEditar(v: Veiculo): void {
     this.editandoId.set(v.id);
+    this.carregarLancamentosVeiculo(v.id);
     this.form.reset({
       marca: v.marca,
       modelo: v.modelo,
@@ -528,9 +565,24 @@ export class VeiculosComponent {
     return m[s] ?? s;
   }
 
+  private carregarLancamentosVeiculo(id: string): void {
+    this.carregandoLancamentos.set(true);
+    this.lancamentosVeiculo.set([]);
+    this.svc.listarLancamentosVeiculo(id).subscribe({
+      next: (data) => { this.lancamentosVeiculo.set(data); this.carregandoLancamentos.set(false); },
+      error: () => this.carregandoLancamentos.set(false),
+    });
+  }
+
   protected formatMoeda(v: number | null): string {
     if (v == null) return '—';
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v));
+  }
+
+  protected formatData(d: string | null): string {
+    if (!d) return '—';
+    const [y, m, day] = d.split('-');
+    return `${day}/${m}/${y}`;
   }
 
   private toISO(d: Date): string {

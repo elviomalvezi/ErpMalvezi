@@ -123,6 +123,20 @@ async def reativar_categoria(
     return CategoriaResponse.model_validate(cat)
 
 
+@router.post("/{categoria_id}/merge/{destino_id}", response_model=CategoriaResponse)
+async def merge_categorias(
+    categoria_id: uuid.UUID,
+    destino_id: uuid.UUID,
+    usuario_id: CurrentUserId,
+    svc: Annotated[CategoriaService, Depends(_svc)],
+) -> CategoriaResponse:
+    try:
+        destino = await svc.merge(categoria_id, destino_id, usuario_id)
+    except DomainError as exc:
+        raise _handle_domain(exc) from exc
+    return CategoriaResponse.model_validate(destino)
+
+
 @router.post("/plano-padrao", status_code=status.HTTP_201_CREATED)
 async def inicializar_plano_padrao(
     usuario_id: CurrentUserId,

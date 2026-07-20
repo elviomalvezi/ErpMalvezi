@@ -101,7 +101,7 @@ class CategoriaService:
         cat = await self._repo.get_by_id(categoria_id)
         if cat is None:
             raise NotFoundError("Categoria não encontrada.")
-        if cat.usuario_id != usuario_id:
+        if not await self._repo.tem_acesso(categoria_id, usuario_id):
             raise PermissionDeniedError("Sem acesso a esta categoria.")
         return cat
 
@@ -113,7 +113,7 @@ class CategoriaService:
             parent = await self._repo.get_by_id(parent_id)
             if parent is None:
                 raise NotFoundError("Categoria pai não encontrada.")
-            if parent.usuario_id != usuario_id:
+            if not await self._repo.tem_acesso(parent_id, usuario_id):
                 raise PermissionDeniedError("Sem acesso à categoria pai.")
             if not parent.ativa:
                 raise DomainError("Categoria pai está inativa.")
@@ -133,6 +133,8 @@ class CategoriaService:
             nivel=nivel,
             codigo=data.codigo,
             descricao=data.descricao,
+            exigir_veiculo=data.exigir_veiculo,
+            exigir_imovel=data.exigir_imovel,
         )
         await self._repo.create(categoria)
         await self._repo.commit()
@@ -157,7 +159,7 @@ class CategoriaService:
                 parent = await self._repo.get_by_id(novo_parent_id)
                 if parent is None:
                     raise NotFoundError("Categoria pai não encontrada.")
-                if parent.usuario_id != usuario_id:
+                if not await self._repo.tem_acesso(novo_parent_id, usuario_id):
                     raise PermissionDeniedError("Sem acesso à categoria pai.")
                 if parent.tipo != cat.tipo:
                     raise DomainError("A categoria pai deve ter o mesmo tipo (Receita/Despesa).")
@@ -236,6 +238,45 @@ class CategoriaService:
         await self._repo.commit()
         logger.info("plano_padrao_inicializado", usuario_id=str(usuario_id), total=count)
         return count
+
+
+    async def merge(
+        self,
+        origem_id: uuid.UUID,
+        destino_id: uuid.UUID,
+        usuario_id: uuid.UUID,
+    ) -> Categoria:
+        from app.modules.lancamento.models import Lancamento
+        from sqlalchemy import update
+
+        origem = await self.obter(origem_id, usuario_id)
+        destino = await self.obter(destino_id, usuario_id)
+
+        if origem_id == destino_id:
+            raise DomainError("Origem e destino devem ser diferentes.")
+        if origem.tipo != destino.tipo:
+            raise DomainError("Só é possível unir categorias do mesmo tipo (RECEITA/DESPESA).")
+
+        # Reassociar todos os lançamentos da origem para o destino
+        await self._repo._db.execute(
+            update(Lancamento)
+            .where(Lancamento.categoria_id == origem_id)
+            .values(categoria_id=destino_id)
+        )
+
+        # Reassociar subcategorias da origem para o destino
+        await self._repo._db.execute(
+            update(Categoria)
+            .where(Categoria.parent_id == origem_id)
+            .values(parent_id=destino_id)
+        )
+
+        # Inativar a categoria de origem
+        origem.ativa = False
+        await self._repo.commit()
+
+        logger.info("categoria_merge", origem=str(origem_id), destino=str(destino_id))
+        return destino
 
 
 def _construir_arvore(categorias: list[Categoria]) -> list[CategoriaTreeNode]:

@@ -2,13 +2,32 @@ import uuid
 
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.sql import Select
 
 from app.modules.categoria.models import Categoria, EscopoCategoria
+from app.modules.empresa.models import UsuarioEmpresa
 
 
 class CategoriaRepository:
     def __init__(self, db: AsyncSession) -> None:
         self._db = db
+
+    # --- helpers de acesso por empresa ----------------------------------------
+
+    def _sq_empresas(self, usuario_id: uuid.UUID) -> Select:
+        return select(UsuarioEmpresa.empresa_id).where(
+            UsuarioEmpresa.usuario_id == usuario_id
+        )
+
+    def _acesso_cond(self, usuario_id: uuid.UUID):
+        """Membro de empresa acessa dados específicos dessa empresa + todos os globais."""
+        sq_empresas = self._sq_empresas(usuario_id)
+        return or_(
+            Categoria.empresa_id.in_(sq_empresas),
+            Categoria.empresa_id.is_(None),
+        )
+
+    # --------------------------------------------------------------------------
 
     async def get_by_id(self, categoria_id: uuid.UUID) -> Categoria | None:
         result = await self._db.execute(
@@ -22,8 +41,8 @@ class CategoriaRepository:
         empresa_id: uuid.UUID | None = None,
         apenas_ativas: bool = True,
     ) -> list[Categoria]:
-        """Retorna categorias globais do usuário + específicas da empresa (se fornecida)."""
-        filtros = [Categoria.usuario_id == usuario_id]
+        """Retorna categorias acessíveis ao usuário via vínculo de empresa."""
+        filtros = [self._acesso_cond(usuario_id)]
 
         if empresa_id is not None:
             filtros.append(
@@ -45,6 +64,15 @@ class CategoriaRepository:
         )
         return list(result.scalars())
 
+    async def tem_acesso(self, categoria_id: uuid.UUID, usuario_id: uuid.UUID) -> bool:
+        result = await self._db.execute(
+            select(Categoria.id).where(
+                Categoria.id == categoria_id,
+                self._acesso_cond(usuario_id),
+            )
+        )
+        return result.scalar_one_or_none() is not None
+
     async def get_by_nome(
         self,
         nome: str,
@@ -53,7 +81,7 @@ class CategoriaRepository:
     ) -> Categoria | None:
         result = await self._db.execute(
             select(Categoria).where(
-                Categoria.usuario_id == usuario_id,
+                self._acesso_cond(usuario_id),
                 Categoria.nome.ilike(nome),
                 Categoria.tipo == tipo,
                 Categoria.ativa.is_(True),
@@ -88,7 +116,7 @@ class CategoriaRepository:
     async def ja_inicializou_plano(self, usuario_id: uuid.UUID) -> bool:
         result = await self._db.execute(
             select(Categoria.id).where(
-                Categoria.usuario_id == usuario_id,
+                self._acesso_cond(usuario_id),
                 Categoria.escopo == EscopoCategoria.GLOBAL,
             )
         )

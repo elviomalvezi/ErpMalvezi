@@ -26,7 +26,7 @@ class PeriodoFluxo(BaseModel):
 
 
 class FluxoCaixaResponse(BaseModel):
-    empresa_id: uuid.UUID | None
+    empresa_ids: list[uuid.UUID] = []
     data_inicio: date
     data_fim: date
     saldo_inicial: Decimal

@@ -62,6 +62,8 @@ class EmpresaCreate(EnderecoSchema):
 # ─── Update ─────────────────────────────────────────────────────────────────
 
 class EmpresaUpdate(EnderecoSchema):
+    tipo: TipoPessoa | None = None
+    documento: str | None = None
     nome_principal: str | None = Field(default=None, min_length=2, max_length=200)
     nome_alternativo: str | None = None
     documento_complementar_1: str | None = None
@@ -104,7 +106,7 @@ class EmpresaResponse(BaseModel):
 
     id: uuid.UUID
     tipo: TipoPessoa
-    documento: str
+    documento: str | None
     nome_principal: str
     nome_alternativo: str | None
     documento_complementar_1: str | None
@@ -149,7 +151,7 @@ class EmpresaListItem(BaseModel):
 
     id: uuid.UUID
     tipo: TipoPessoa
-    documento: str
+    documento: str | None
     nome_principal: str
     nome_alternativo: str | None
     cor_primaria: str | None

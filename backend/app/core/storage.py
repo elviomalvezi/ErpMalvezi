@@ -29,24 +29,35 @@ class StorageProvider(ABC):
 
 class LocalStorageProvider(StorageProvider):
     def __init__(self, base_dir: str | Path, base_url: str) -> None:
-        self._base_dir = Path(base_dir)
+        self._base_dir = Path(base_dir).resolve()
         self._base_dir.mkdir(parents=True, exist_ok=True)
         self._base_url = base_url.rstrip("/")
 
+    def _resolver(self, caminho: str) -> Path:
+        """Resolve `caminho` dentro de base_dir, bloqueando path traversal.
+
+        Rejeita caminhos absolutos e qualquer resultado que escape do
+        diretório base (ex.: '../../etc/passwd').
+        """
+        candidato = (self._base_dir / caminho).resolve()
+        if candidato != self._base_dir and self._base_dir not in candidato.parents:
+            raise PermissionError(f"Caminho de armazenamento inválido: {caminho}")
+        return candidato
+
     async def salvar(self, conteudo: bytes, caminho: str, content_type: str) -> str:
-        destino = self._base_dir / caminho
+        destino = self._resolver(caminho)
         destino.parent.mkdir(parents=True, exist_ok=True)
         destino.write_bytes(conteudo)
         return f"{self._base_url}/{caminho}"
 
     async def ler(self, caminho: str) -> bytes:
-        destino = self._base_dir / caminho
+        destino = self._resolver(caminho)
         if not destino.exists():
             raise FileNotFoundError(caminho)
         return destino.read_bytes()
 
     async def excluir(self, caminho: str) -> None:
-        destino = self._base_dir / caminho
+        destino = self._resolver(caminho)
         if destino.exists():
             destino.unlink()
 

@@ -36,7 +36,7 @@ class Empresa(BaseModel):
     tipo: Mapped[TipoPessoa] = mapped_column(
         Enum(TipoPessoa, name="tipo_pessoa", create_type=False), nullable=False
     )
-    documento: Mapped[str] = mapped_column(String(18), unique=True, nullable=False)
+    documento: Mapped[str | None] = mapped_column(String(18), nullable=True)
     nome_principal: Mapped[str] = mapped_column(String(200), nullable=False)
     nome_alternativo: Mapped[str | None] = mapped_column(String(200))
     documento_complementar_1: Mapped[str | None] = mapped_column(String(30))

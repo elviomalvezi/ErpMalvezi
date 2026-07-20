@@ -15,7 +15,7 @@ import { DividerModule } from 'primeng/divider';
 import { MessageService } from 'primeng/api';
 
 import { EmpresaStore } from '../../core/stores/empresa.store';
-import { ContatoService } from '../../core/services/contato.service';
+import { ConsultaCnpj, ContatoService } from '../../core/services/contato.service';
 import { Contato, ContatoCreate, ContatoUpdate } from '../../core/models';
 
 type FiltroTipo = 'TODOS' | 'CLIENTES' | 'FORNECEDORES';
@@ -128,6 +128,10 @@ type FiltroTipo = 'TODOS' | 'CLIENTES' | 'FORNECEDORES';
               <div class="acoes-cell">
                 <p-button icon="pi pi-pencil" [text]="true" size="small" severity="secondary"
                   (onClick)="abrirEditar(c)" pTooltip="Editar" tooltipPosition="top" />
+                @if (c.ativa) {
+                  <p-button icon="pi pi-arrows-h" [text]="true" size="small" severity="secondary"
+                    (onClick)="abrirMerge(c)" pTooltip="Unir com outro contato" tooltipPosition="top" />
+                }
                 <p-button
                   [icon]="c.ativa ? 'pi pi-ban' : 'pi pi-check-circle'"
                   [severity]="c.ativa ? 'danger' : 'success'"
@@ -156,7 +160,7 @@ type FiltroTipo = 'TODOS' | 'CLIENTES' | 'FORNECEDORES';
       (visibleChange)="$event ? dialogVisivel.set(true) : fecharDialog()"
       [modal]="true"
       [style]="{ width: '640px', 'max-width': '95vw' }"
-      [draggable]="false"
+      [draggable]="true"
       [resizable]="false"
     >
       <form [formGroup]="form" class="dialog-form">
@@ -175,11 +179,32 @@ type FiltroTipo = 'TODOS' | 'CLIENTES' | 'FORNECEDORES';
           </div>
           <div class="field flex-2">
             <label>{{ form.get('tipo')?.value === 'PJ' ? 'CNPJ' : 'CPF' }} *</label>
-            <input pInputText formControlName="documento"
-              [placeholder]="form.get('tipo')?.value === 'PJ' ? '00.000.000/0000-00' : '000.000.000-00'"
-              [style]="{ width: '100%' }" />
+            <div class="doc-input-row">
+              <input pInputText formControlName="documento"
+                [placeholder]="form.get('tipo')?.value === 'PJ' ? '00.000.000/0000-00' : '000.000.000-00'"
+                (blur)="verificarDuplicata()" />
+              @if (form.get('tipo')?.value === 'PJ') {
+                <p-button icon="pi pi-search" label="Consultar"
+                  type="button"
+                  styleClass="p-button-outlined"
+                  pTooltip="Buscar dados do CNPJ na Receita (BrasilAPI)"
+                  [loading]="consultandoCnpj()"
+                  (onClick)="consultarCnpj()" />
+              }
+            </div>
           </div>
         </div>
+        @if (duplicataAviso()) {
+          <p-message severity="warn" styleClass="w-full">
+            <span>
+              <strong>Possível duplicata:</strong> já existe o contato
+              <strong>{{ duplicataAviso()!.nome_principal }}</strong>
+              com este documento.
+              <a href="#" (click)="$event.preventDefault(); usarExistente()">Usar este contato</a>
+              ou continue para criar um novo.
+            </span>
+          </p-message>
+        }
 
         <div class="field">
           <label>{{ form.get('tipo')?.value === 'PJ' ? 'Razão Social' : 'Nome Completo' }} *</label>
@@ -300,6 +325,37 @@ type FiltroTipo = 'TODOS' | 'CLIENTES' | 'FORNECEDORES';
         </div>
       </ng-template>
     </p-dialog>
+
+    <!-- Dialog Merge -->
+    <p-dialog header="Unir Contatos" [(visible)]="mergeDialog" [modal]="true"
+      [style]="{ width: '560px', 'max-width': '95vw' }"
+      [contentStyle]="{ 'min-height': '200px', padding: '1.25rem 1.5rem' }">
+      <div class="merge-body">
+        <p class="merge-info">
+          <i class="pi pi-exclamation-triangle" style="color:var(--p-orange-500);flex-shrink:0;margin-top:2px"></i>
+          <span>Todos os lançamentos de <strong>{{ mergeOrigem()?.nome_principal }}</strong> serão movidos para o contato de destino e ele será inativado.</span>
+        </p>
+        <div class="field">
+          <label>Contato de destino *</label>
+          <p-select
+            [ngModel]="mergeDestinoId()"
+            (ngModelChange)="mergeDestinoId.set($event)"
+            [options]="mergeOpcoes()"
+            optionLabel="label" optionValue="value"
+            placeholder="Selecione o contato de destino"
+            [style]="{ width: '100%' }"
+            [filter]="true"
+            filterPlaceholder="Buscar contato..."
+            appendTo="body"
+          />
+        </div>
+      </div>
+      <ng-template pTemplate="footer">
+        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="mergeDialog.set(false)" />
+        <p-button label="Unir" icon="pi pi-arrows-h" severity="danger"
+          [disabled]="!mergeDestinoId()" [loading]="mergeLoading()" (onClick)="confirmarMerge()" />
+      </ng-template>
+    </p-dialog>
   `,
   styles: [`
     .page { max-width: 1100px; }
@@ -381,11 +437,22 @@ type FiltroTipo = 'TODOS' | 'CLIENTES' | 'FORNECEDORES';
 
     .form-row { display: flex; gap: 0.75rem; }
 
+    .doc-input-row { display: flex; gap: 0.5rem; align-items: stretch; }
+    .doc-input-row input { flex: 1 1 auto; min-width: 0; }
+    .doc-input-row p-button { flex-shrink: 0; }
+
     .footer-acoes {
       display: flex;
       justify-content: flex-end;
       gap: 0.5rem;
     }
+    .merge-info {
+      display: flex; align-items: flex-start; gap: 0.5rem;
+      background: var(--p-orange-50); border-left: 4px solid var(--p-orange-400);
+      padding: 0.75rem 1rem; border-radius: 0 6px 6px 0; margin-bottom: 1.25rem;
+      font-size: 0.9rem; line-height: 1.5;
+    }
+    .merge-body { display: flex; flex-direction: column; gap: 1rem; }
   `],
 })
 export class ContatosComponent implements OnInit {
@@ -435,7 +502,7 @@ export class ContatosComponent implements OnInit {
     nome_alternativo: [null as string | null],
     eh_cliente: [true],
     eh_fornecedor: [false],
-    escopo: ['global', Validators.required],
+    escopo: ['especifico', Validators.required],
     email: [null as string | null],
     telefone: [null as string | null],
     celular: [null as string | null],
@@ -455,20 +522,24 @@ export class ContatosComponent implements OnInit {
   }
 
   private carregar(): void {
-    const empresaId = this.empresaStore.empresaAtiva()?.id;
     this.carregando.set(true);
-    this.contatoService.listar({ empresaId, apenasAtivas: false }).subscribe({
+    this.contatoService.listar({ apenasAtivas: false }).subscribe({
       next: (data) => { this.lista.set(data); this.carregando.set(false); },
-      error: () => this.carregando.set(false),
+      error: (err) => {
+        this.carregando.set(false);
+        const detail = err?.error?.detail ?? 'Erro ao carregar contatos.';
+        this.messageService.add({ severity: 'error', summary: 'Erro', detail });
+      },
     });
   }
 
   protected abrirNovo(): void {
     this.editandoId.set(null);
     this.formErro.set(null);
+    this.duplicataAviso.set(null);
     this.form.reset({
       tipo: 'PJ', documento: '', nome_principal: '', nome_alternativo: null,
-      eh_cliente: true, eh_fornecedor: false, escopo: 'global',
+      eh_cliente: true, eh_fornecedor: false, escopo: 'especifico',
       email: null, telefone: null, celular: null, site: null,
       cep: null, logradouro: null, numero: null, complemento: null,
       bairro: null, cidade: null, uf: null, observacoes: null,
@@ -508,6 +579,7 @@ export class ContatosComponent implements OnInit {
   protected fecharDialog(): void {
     this.dialogVisivel.set(false);
     this.formErro.set(null);
+    this.duplicataAviso.set(null);
   }
 
   protected salvar(): void {
@@ -626,7 +698,8 @@ export class ContatosComponent implements OnInit {
     return 'warn';
   }
 
-  protected formatDoc(doc: string, tipo: 'PJ' | 'PF'): string {
+  protected formatDoc(doc: string | null | undefined, tipo: 'PJ' | 'PF'): string {
+    if (!doc) return '—';
     if (tipo === 'PJ' && doc.length === 14) {
       return `${doc.slice(0, 2)}.${doc.slice(2, 5)}.${doc.slice(5, 8)}/${doc.slice(8, 12)}-${doc.slice(12)}`;
     }
@@ -639,5 +712,103 @@ export class ContatosComponent implements OnInit {
   private extractError(err: unknown, fallback: string): string {
     const e = err as { error?: { detail?: unknown } };
     return typeof e.error?.detail === 'string' ? e.error.detail : fallback;
+  }
+
+  // ── Consulta de CNPJ (BrasilAPI) ───────────────────────────────────────────
+  protected readonly consultandoCnpj = signal(false);
+
+  protected consultarCnpj(): void {
+    if (this.form.get('tipo')?.value !== 'PJ') return;
+    const doc = (this.form.get('documento')?.value || '').replace(/\D/g, '');
+    if (doc.length !== 14) {
+      this.messageService.add({ severity: 'warn', summary: 'Informe um CNPJ com 14 dígitos para consultar.' });
+      return;
+    }
+    this.consultandoCnpj.set(true);
+    this.contatoService.consultarCnpj(doc).subscribe({
+      next: (d: ConsultaCnpj) => {
+        this.consultandoCnpj.set(false);
+        // Só preenche campos que vieram com valor (não sobrescreve com vazio).
+        const campos: (keyof ConsultaCnpj)[] = [
+          'nome_principal', 'nome_alternativo', 'email', 'telefone',
+          'cep', 'logradouro', 'numero', 'complemento', 'bairro', 'cidade', 'uf',
+        ];
+        const patch: Record<string, unknown> = {};
+        for (const campo of campos) {
+          if (d[campo]) patch[campo] = d[campo];
+        }
+        this.form.patchValue(patch);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Dados do CNPJ carregados.',
+          detail: d.situacao ? `Situação cadastral: ${d.situacao}` : undefined,
+        });
+      },
+      error: (err) => {
+        this.consultandoCnpj.set(false);
+        this.messageService.add({ severity: 'error', summary: this.extractError(err, 'Não foi possível consultar o CNPJ.') });
+      },
+    });
+  }
+
+  // ── Duplicata ─────────────────────────────────────────────────────────────
+  protected readonly duplicataAviso = signal<{ id: string; nome_principal: string } | null>(null);
+
+  protected verificarDuplicata(): void {
+    const doc = this.form.get('documento')?.value;
+    if (!doc || doc.length < 11) { this.duplicataAviso.set(null); return; }
+    const excluirId = this.editandoId() ?? undefined;
+    this.contatoService.verificarDuplicata(doc, excluirId).subscribe({
+      next: (r) => this.duplicataAviso.set(
+        r.existe && r.contato ? { id: r.contato.id, nome_principal: r.contato.nome_principal } : null
+      ),
+      error: () => this.duplicataAviso.set(null),
+    });
+  }
+
+  protected usarExistente(): void {
+    const c = this.duplicataAviso();
+    if (!c) return;
+    const existente = this.lista().find(x => x.id === c.id);
+    if (existente) { this.fecharDialog(); this.abrirEditar(existente); }
+  }
+
+  // ── Merge ─────────────────────────────────────────────────────────────────
+  protected mergeDialog = signal(false);
+  protected mergeOrigem = signal<Contato | null>(null);
+  protected mergeDestinoId = signal<string | null>(null);
+  protected mergeLoading = signal(false);
+
+  protected mergeOpcoes = computed(() => {
+    const origem = this.mergeOrigem();
+    if (!origem) return [];
+    return this.lista()
+      .filter(c => c.ativa && c.id !== origem.id)
+      .map(c => ({ label: c.nome_principal, value: c.id }));
+  });
+
+  protected abrirMerge(c: Contato): void {
+    this.mergeOrigem.set(c);
+    this.mergeDestinoId.set(null);
+    this.mergeDialog.set(true);
+  }
+
+  protected confirmarMerge(): void {
+    const origem = this.mergeOrigem();
+    const destinoId = this.mergeDestinoId();
+    if (!origem || !destinoId) return;
+    this.mergeLoading.set(true);
+    this.contatoService.merge(origem.id, destinoId).subscribe({
+      next: () => {
+        this.mergeLoading.set(false);
+        this.mergeDialog.set(false);
+        this.messageService.add({ severity: 'success', summary: 'Contatos unidos com sucesso.' });
+        this.carregar();
+      },
+      error: (err) => {
+        this.mergeLoading.set(false);
+        this.messageService.add({ severity: 'error', summary: this.extractError(err, 'Erro ao unir contatos.') });
+      },
+    });
   }
 }

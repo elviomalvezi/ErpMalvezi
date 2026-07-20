@@ -5,6 +5,22 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Contato, ContatoCreate, ContatoUpdate } from '../models';
 
+export interface ConsultaCnpj {
+  documento: string;
+  nome_principal: string | null;
+  nome_alternativo: string | null;
+  email: string | null;
+  telefone: string | null;
+  cep: string | null;
+  logradouro: string | null;
+  numero: string | null;
+  complemento: string | null;
+  bairro: string | null;
+  cidade: string | null;
+  uf: string | null;
+  situacao: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ContatoService {
   private readonly http = inject(HttpClient);
@@ -37,5 +53,26 @@ export class ContatoService {
 
   reativar(id: string): Observable<Contato> {
     return this.http.patch<Contato>(`${this.base}/${id}/reativar`, {});
+  }
+
+  merge(origemId: string, destinoId: string): Observable<Contato> {
+    return this.http.post<Contato>(`${this.base}/${origemId}/merge/${destinoId}`, {});
+  }
+
+  consultarCnpj(cnpj: string): Observable<ConsultaCnpj> {
+    const params = new HttpParams().set('cnpj', cnpj);
+    return this.http.get<ConsultaCnpj>(`${this.base}/consultar-cnpj`, { params });
+  }
+
+  verificarDuplicata(
+    documento: string,
+    excluirId?: string,
+  ): Observable<{ existe: boolean; contato: Contato | null }> {
+    let params = new HttpParams().set('documento', documento);
+    if (excluirId) params = params.set('excluir_id', excluirId);
+    return this.http.get<{ existe: boolean; contato: Contato | null }>(
+      `${this.base}/verificar-duplicata`,
+      { params },
+    );
   }
 }

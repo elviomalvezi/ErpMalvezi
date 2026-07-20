@@ -64,7 +64,7 @@ class FaturaService:
         fatura = await self._repo.get_by_id(fatura_id)
         if fatura is None:
             raise NotFoundError("Fatura não encontrada.")
-        if fatura.usuario_id != usuario_id:
+        if not await self._repo.tem_acesso(fatura_id, usuario_id):
             raise PermissionDeniedError("Sem acesso a esta fatura.")
         return fatura
 
@@ -89,14 +89,14 @@ class FaturaService:
     ) -> Fatura:
         existente = await self._repo.get_by_conta_competencia(conta_bancaria_id, competencia)
         if existente is not None:
-            if existente.usuario_id != usuario_id:
+            if not await self._repo.tem_acesso(existente.id, usuario_id):
                 raise PermissionDeniedError("Sem acesso a esta fatura.")
             return existente
 
         conta = await self._conta_repo.get_by_id(conta_bancaria_id)
         if conta is None:
             raise NotFoundError("Conta bancária não encontrada.")
-        if conta.usuario_id != usuario_id:
+        if not await self._conta_repo.tem_acesso(conta_bancaria_id, usuario_id):
             raise PermissionDeniedError("Sem acesso a esta conta bancária.")
         if conta.tipo != TipoConta.CARTAO_CREDITO:
             raise DomainError("A conta informada não é um cartão de crédito.")
@@ -117,6 +117,8 @@ class FaturaService:
             data_fechamento=data_fechamento,
             data_vencimento=data_vencimento,
         )
+        # create() faz flush (id já disponível); o commit fica a cargo do fluxo
+        # chamador (criação do lançamento), preservando atomicidade.
         await self._repo.create(fatura)
         logger.info(
             "fatura_criada",
@@ -132,6 +134,8 @@ class FaturaService:
                 f"Fatura não pode ser fechada (status atual: {fatura.status})."
             )
         fatura.status = StatusFatura.FECHADA
+        await self._repo.commit()
+        await self._repo.refresh(fatura)
         logger.info("fatura_fechada", fatura_id=str(fatura_id))
         return fatura
 
@@ -142,6 +146,8 @@ class FaturaService:
                 f"Fatura não pode ser reaberta (status atual: {fatura.status})."
             )
         fatura.status = StatusFatura.ABERTA
+        await self._repo.commit()
+        await self._repo.refresh(fatura)
         logger.info("fatura_reaberta", fatura_id=str(fatura_id))
         return fatura
 
@@ -160,7 +166,7 @@ class FaturaService:
         conta_pag = await self._conta_repo.get_by_id(data.conta_pagamento_id)
         if conta_pag is None:
             raise NotFoundError("Conta de pagamento não encontrada.")
-        if conta_pag.usuario_id != usuario_id:
+        if not await self._conta_repo.tem_acesso(data.conta_pagamento_id, usuario_id):
             raise PermissionDeniedError("Sem acesso à conta de pagamento.")
         if conta_pag.tipo == TipoConta.CARTAO_CREDITO:
             raise DomainError("Não é possível usar um cartão de crédito para pagar a fatura.")
@@ -169,6 +175,8 @@ class FaturaService:
         fatura.data_pagamento = data.data_pagamento
         fatura.conta_pagamento_id = data.conta_pagamento_id
         fatura.status = StatusFatura.PAGA
+        await self._repo.commit()
+        await self._repo.refresh(fatura)
         logger.info(
             "fatura_paga",
             fatura_id=str(fatura_id),

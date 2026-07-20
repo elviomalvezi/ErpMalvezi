@@ -27,7 +27,7 @@ class ContaBancariaService:
         conta = await self._repo.get_by_id(conta_id)
         if conta is None:
             raise NotFoundError("Conta bancária não encontrada.")
-        if conta.usuario_id != usuario_id:
+        if not await self._repo.tem_acesso(conta_id, usuario_id):
             raise PermissionDeniedError("Sem acesso a esta conta bancária.")
         return conta
 

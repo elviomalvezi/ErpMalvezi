@@ -11,6 +11,7 @@ import { ToastModule } from 'primeng/toast';
 import { MessageModule } from 'primeng/message';
 import { TooltipModule } from 'primeng/tooltip';
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
+import { CheckboxModule } from 'primeng/checkbox';
 import { MessageService } from 'primeng/api';
 
 import { EmpresaStore } from '../../core/stores/empresa.store';
@@ -37,6 +38,7 @@ type FiltroTipo = 'TODOS' | 'RECEITA' | 'DESPESA';
     MessageModule,
     TooltipModule,
     ToggleSwitchModule,
+    CheckboxModule,
   ],
   template: `
     <p-toast />
@@ -154,6 +156,17 @@ type FiltroTipo = 'TODOS' | 'RECEITA' | 'DESPESA';
                   pTooltip="Editar"
                   tooltipPosition="top"
                 />
+                @if (cat.ativa) {
+                  <p-button
+                    icon="pi pi-arrows-h"
+                    severity="secondary"
+                    [text]="true"
+                    size="small"
+                    (onClick)="abrirMerge(cat)"
+                    pTooltip="Unir com outra categoria"
+                    tooltipPosition="top"
+                  />
+                }
                 <p-button
                   [icon]="cat.ativa ? 'pi pi-ban' : 'pi pi-check-circle'"
                   [severity]="cat.ativa ? 'danger' : 'success'"
@@ -188,7 +201,7 @@ type FiltroTipo = 'TODOS' | 'RECEITA' | 'DESPESA';
       (visibleChange)="$event ? dialogVisivel.set(true) : fecharDialog()"
       [modal]="true"
       [style]="{ width: '480px', 'max-width': '95vw' }"
-      [draggable]="false"
+      [draggable]="true"
       [resizable]="false"
     >
       <form [formGroup]="form" class="dialog-form">
@@ -262,6 +275,21 @@ type FiltroTipo = 'TODOS' | 'RECEITA' | 'DESPESA';
             [style]="{ width: '100%', resize: 'vertical' }"
           ></textarea>
         </div>
+
+        <div class="field field-full">
+          <label style="margin-bottom:0.5rem">Vínculo com Patrimônio</label>
+          <div class="patrimonio-checks">
+            <div class="check-item">
+              <p-checkbox formControlName="exigir_veiculo" [binary]="true" inputId="chk_veiculo" />
+              <label for="chk_veiculo">Exigir Veículo</label>
+            </div>
+            <div class="check-item">
+              <p-checkbox formControlName="exigir_imovel" [binary]="true" inputId="chk_imovel" />
+              <label for="chk_imovel">Exigir Imóvel</label>
+            </div>
+          </div>
+          <small style="color:var(--p-surface-400)">Quando marcado, o lançamento nessa categoria obrigatoriamente deverá vincular o respectivo patrimônio.</small>
+        </div>
       </form>
 
       <ng-template pTemplate="footer">
@@ -279,9 +307,51 @@ type FiltroTipo = 'TODOS' | 'RECEITA' | 'DESPESA';
         </div>
       </ng-template>
     </p-dialog>
+
+    <!-- Dialog Merge -->
+    <p-dialog
+      header="Unir Categorias"
+      [(visible)]="mergeDialog"
+      [modal]="true"
+      [style]="{ width: '560px', 'max-width': '95vw' }"
+      [contentStyle]="{ 'min-height': '200px', padding: '1.25rem 1.5rem' }"
+    >
+      <div class="merge-body">
+        <p class="merge-info">
+          <i class="pi pi-exclamation-triangle" style="color:var(--p-orange-500);flex-shrink:0;margin-top:2px"></i>
+          <span>Todos os lançamentos de <strong>{{ mergeOrigem()?.nome }}</strong> serão movidos para a categoria de destino e ela será inativada.</span>
+        </p>
+        <div class="field">
+          <label>Categoria de destino *</label>
+          <p-select
+            [ngModel]="mergeDestinoId()"
+            (ngModelChange)="mergeDestinoId.set($event)"
+            [options]="mergeOpcoes()"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Selecione a categoria de destino"
+            [style]="{ width: '100%' }"
+            [filter]="true"
+            filterPlaceholder="Buscar categoria..."
+            appendTo="body"
+          />
+        </div>
+      </div>
+      <ng-template pTemplate="footer">
+        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="mergeDialog.set(false)" />
+        <p-button label="Unir" icon="pi pi-arrows-h" severity="danger"
+          [disabled]="!mergeDestinoId()" [loading]="mergeLoading()"
+          (onClick)="confirmarMerge()" />
+      </ng-template>
+    </p-dialog>
+
   `,
   styles: [`
     .page { max-width: 1000px; }
+    .patrimonio-checks { display: flex; gap: 2rem; align-items: center; margin-bottom: 0.25rem; }
+    .check-item { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+    .check-item label { font-size: 0.875rem; font-weight: 500; cursor: pointer; margin: 0; }
+    .field-full { grid-column: 1 / -1; }
 
     .page-header {
       display: flex;
@@ -340,6 +410,13 @@ type FiltroTipo = 'TODOS' | 'RECEITA' | 'DESPESA';
       justify-content: flex-end;
       gap: 0.5rem;
     }
+    .merge-info {
+      display: flex; align-items: flex-start; gap: 0.5rem;
+      background: var(--p-orange-50); border-left: 4px solid var(--p-orange-400);
+      padding: 0.75rem 1rem; border-radius: 0 6px 6px 0; margin-bottom: 1.25rem;
+      font-size: 0.9rem; line-height: 1.5;
+    }
+    .merge-body { display: flex; flex-direction: column; gap: 1rem; padding: 0.25rem 0; }
   `],
 })
 export class CategoriasComponent implements OnInit {
@@ -399,6 +476,8 @@ export class CategoriasComponent implements OnInit {
     escopo: ['global', Validators.required],
     codigo: [null as string | null],
     descricao: [null as string | null],
+    exigir_veiculo: [false],
+    exigir_imovel: [false],
   });
 
   ngOnInit(): void {
@@ -424,7 +503,7 @@ export class CategoriasComponent implements OnInit {
     this.isEditing.set(false);
     this.editandoId.set(null);
     this.formErro.set(null);
-    this.form.reset({ tipo: 'RECEITA', escopo: 'global', nome: '', parent_id: null, codigo: null, descricao: null });
+    this.form.reset({ tipo: 'RECEITA', escopo: 'global', nome: '', parent_id: null, codigo: null, descricao: null, exigir_veiculo: false, exigir_imovel: false });
     this.form.get('tipo')?.enable();
     this.form.get('escopo')?.enable();
     this.tipoParentFilter.set('RECEITA');
@@ -443,6 +522,8 @@ export class CategoriasComponent implements OnInit {
       escopo: cat.escopo,
       codigo: cat.codigo,
       descricao: cat.descricao,
+      exigir_veiculo: cat.exigir_veiculo ?? false,
+      exigir_imovel: cat.exigir_imovel ?? false,
     });
     this.form.get('tipo')?.disable();
     this.form.get('escopo')?.disable();
@@ -480,6 +561,8 @@ export class CategoriasComponent implements OnInit {
       empresa_id: empresaId,
       codigo: v.codigo || null,
       descricao: v.descricao || null,
+      exigir_veiculo: v.exigir_veiculo ?? false,
+      exigir_imovel: v.exigir_imovel ?? false,
     };
     this.salvando.set(true);
     this.categoriaService.criar(payload).subscribe({
@@ -504,6 +587,8 @@ export class CategoriasComponent implements OnInit {
       parent_id: v.parent_id ?? null,
       codigo: v.codigo || null,
       descricao: v.descricao || null,
+      exigir_veiculo: v.exigir_veiculo ?? false,
+      exigir_imovel: v.exigir_imovel ?? false,
     };
     this.salvando.set(true);
     this.categoriaService.atualizar(this.editandoId()!, payload).subscribe({
@@ -563,5 +648,45 @@ export class CategoriasComponent implements OnInit {
 
   protected indentPadding(nivel: number): string {
     return `${(nivel - 1) * 1.5}rem`;
+  }
+
+  // ── Merge ─────────────────────────────────────────────────────────────────
+  protected mergeDialog = signal(false);
+  protected mergeOrigem = signal<Categoria | null>(null);
+  protected mergeDestinoId = signal<string | null>(null);
+  protected mergeLoading = signal(false);
+
+  protected mergeOpcoes = computed(() => {
+    const origem = this.mergeOrigem();
+    if (!origem) return [];
+    return this.lista()
+      .filter(c => c.ativa && c.id !== origem.id && c.tipo === origem.tipo)
+      .map(c => ({ label: c.nome, value: c.id }));
+  });
+
+  protected abrirMerge(cat: Categoria): void {
+    this.mergeOrigem.set(cat);
+    this.mergeDestinoId.set(null);
+    this.mergeDialog.set(true);
+  }
+
+  protected confirmarMerge(): void {
+    const origem = this.mergeOrigem();
+    const destinoId = this.mergeDestinoId();
+    if (!origem || !destinoId) return;
+    this.mergeLoading.set(true);
+    this.categoriaService.merge(origem.id, destinoId).subscribe({
+      next: () => {
+        this.mergeLoading.set(false);
+        this.mergeDialog.set(false);
+        this.messageService.add({ severity: 'success', summary: 'Categorias unidas com sucesso.' });
+        this.carregar();
+      },
+      error: (err) => {
+        this.mergeLoading.set(false);
+        const detail = err?.error?.detail ?? 'Erro ao unir categorias.';
+        this.messageService.add({ severity: 'error', summary: detail });
+      },
+    });
   }
 }

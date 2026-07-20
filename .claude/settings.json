@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-Command docker -ErrorAction SilentlyContinue)",
+      "Read(//c/Program Files/**)",
+      "PowerShell(cd \"c:\\\\Workspace\\\\AppFinanceiro\\\\backend\"; .venv\\\\Scripts\\\\python.exe -m ruff check app/ tests/ 2>&1; $env:SECRET_KEY=\"test-secret-key-for-tests-only\"; $env:DATABASE_URL=\"postgresql+asyncpg://user:pass@localhost/test\"; .venv\\\\Scripts\\\\python.exe -m pytest tests/test_health.py -v 2>&1)",
+      "PowerShell(ng version 2>&1)",
+      "PowerShell(node --version)",
+      "PowerShell(npm --version 2>&1)",
+      "PowerShell(npm install -g @angular/cli@latest --quiet 2>&1)"
+    ]
+  }
+}

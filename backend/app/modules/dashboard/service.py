@@ -3,7 +3,10 @@ from datetime import date
 from decimal import Decimal
 
 from app.modules.dashboard.repository import DashboardRepository
-from app.modules.dashboard.schemas import DashboardResponse, KpiLancamentos, LancamentoPendente
+from app.modules.dashboard.schemas import (
+    CategoriaGrafico, DashboardResponse, EvolucaoMensal,
+    GraficosResponse, KpiLancamentos, LancamentoPendente,
+)
 from app.modules.lancamento.models import StatusLancamento, TipoLancamento
 
 _ZERO = Decimal("0")
@@ -63,6 +66,8 @@ class DashboardService:
                 tipo=str(lct.tipo),
             )
 
+        alertas = await self._repo.alertas_count(usuario_id, data_referencia, empresa_id)
+
         return DashboardResponse(
             empresa_id=empresa_id,
             data_inicio=data_inicio,
@@ -72,4 +77,22 @@ class DashboardService:
             a_vencer_hoje=[_to_pendente(lct) for lct in a_vencer],
             vencidos=[_to_pendente(lct) for lct in vencidos],
             proximos_vencimentos=[_to_pendente(lct) for lct in proximos],
+            alertas_count=alertas,
+        )
+
+    async def graficos(
+        self,
+        usuario_id: uuid.UUID,
+        data_inicio: date,
+        data_fim: date,
+        data_referencia: date,
+        empresa_id: uuid.UUID | None = None,
+    ) -> GraficosResponse:
+        cats = await self._repo.despesas_por_categoria(usuario_id, data_inicio, data_fim, empresa_id)
+        evolucao = await self._repo.evolucao_mensal(usuario_id, empresa_id)
+        alertas = await self._repo.alertas_count(usuario_id, data_referencia, empresa_id)
+        return GraficosResponse(
+            despesas_por_categoria=[CategoriaGrafico(**c) for c in cats],
+            evolucao_mensal=[EvolucaoMensal(**e) for e in evolucao],
+            alertas_count=alertas,
         )

@@ -17,12 +17,19 @@ export class AuthService {
       .pipe(
         tap((res) => this.authStore.setToken(res.access_token)),
         switchMap(() => this.me()),
-        tap((usuario) => this.authStore.setUsuario(usuario.id, usuario.nome)),
+        tap((usuario) => this.authStore.setUsuario(usuario.id, usuario.nome, usuario.admin, usuario.gestor)),
       );
   }
 
   me(): Observable<UsuarioMe> {
     return this.http.get<UsuarioMe>(`${environment.apiUrl}/usuarios/me`);
+  }
+
+  alterarSenha(senhaAtual: string, novaSenha: string): Observable<void> {
+    return this.http.post<void>(`${environment.apiUrl}/usuarios/me/alterar-senha`, {
+      senha_atual: senhaAtual,
+      nova_senha: novaSenha,
+    });
   }
 
   logout(): Observable<void> {

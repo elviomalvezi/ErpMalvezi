@@ -95,12 +95,38 @@ class EmpresaService:
         empresa = await self.obter(empresa_id, usuario_id)
 
         update_data = data.model_dump(exclude_unset=True)
+
+        novo_tipo = update_data.get("tipo", empresa.tipo)
+        novo_doc = update_data.get("documento")
+
+        if novo_doc is not None:
+            novo_doc = _validar_documento(novo_doc, novo_tipo)
+            if novo_doc != empresa.documento:
+                existente = await self.repo.get_by_documento(novo_doc)
+                if existente and existente.id != empresa_id:
+                    raise ConflictError("Já existe uma empresa cadastrada com este documento")
+            update_data["documento"] = novo_doc
+
+        if update_data.get("tipo") == TipoPessoa.PF and "regime_tributario" not in update_data:
+            update_data["regime_tributario"] = None
+
         for field, value in update_data.items():
             setattr(empresa, field, value)
 
         await self.db.commit()
         await self.db.refresh(empresa)
         return empresa
+
+    async def excluir(self, empresa_id: uuid.UUID, usuario_id: uuid.UUID) -> None:
+        empresa = await self.obter(empresa_id, usuario_id)
+        if await self.repo.has_lancamentos(empresa_id):
+            raise DomainError("Empresa possui lançamentos e não pode ser excluída permanentemente.")
+        from sqlalchemy import delete as sql_delete
+        await self.db.execute(
+            sql_delete(UsuarioEmpresa).where(UsuarioEmpresa.empresa_id == empresa_id)
+        )
+        await self.db.delete(empresa)
+        await self.db.commit()
 
     async def inativar(self, empresa_id: uuid.UUID, usuario_id: uuid.UUID) -> Empresa:
         empresa = await self.obter(empresa_id, usuario_id)

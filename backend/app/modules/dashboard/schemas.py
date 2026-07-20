@@ -22,6 +22,23 @@ class LancamentoPendente(BaseModel):
     tipo: str
 
 
+class CategoriaGrafico(BaseModel):
+    categoria: str
+    total: Decimal
+
+
+class EvolucaoMensal(BaseModel):
+    mes: str
+    receitas: float
+    despesas: float
+
+
+class GraficosResponse(BaseModel):
+    despesas_por_categoria: list[CategoriaGrafico]
+    evolucao_mensal: list[EvolucaoMensal]
+    alertas_count: int
+
+
 class DashboardResponse(BaseModel):
     empresa_id: uuid.UUID | None
     data_inicio: date
@@ -31,3 +48,4 @@ class DashboardResponse(BaseModel):
     a_vencer_hoje: list[LancamentoPendente]
     vencidos: list[LancamentoPendente]
     proximos_vencimentos: list[LancamentoPendente]
+    alertas_count: int = 0

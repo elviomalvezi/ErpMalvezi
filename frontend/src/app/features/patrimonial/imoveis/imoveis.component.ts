@@ -1,6 +1,6 @@
 import { DecimalPipe } from '@angular/common';
 import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators, FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { ConfirmationService, MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
@@ -16,11 +16,13 @@ import { TagModule } from 'primeng/tag';
 import { TextareaModule } from 'primeng/textarea';
 import { ToastModule } from 'primeng/toast';
 import { TooltipModule } from 'primeng/tooltip';
+import { CheckboxModule } from 'primeng/checkbox';
 
 import { EmpresaStore } from '../../../core/stores/empresa.store';
 import { PatrimonioService } from '../../../core/services/patrimonio.service';
+import { environment } from '../../../../environments/environment';
 import { AnexosPanelComponent } from '../../../shared/components/anexos-panel/anexos-panel.component';
-import type { Imovel, ImovelCreate, ImovelUpdate, StatusImovel, TipoImovel } from '../../../core/models';
+import type { Imovel, ImovelCreate, ImovelUpdate, Lancamento, StatusImovel, TipoImovel } from '../../../core/models';
 
 type FiltroStatus = 'TODOS' | StatusImovel;
 
@@ -29,10 +31,10 @@ type FiltroStatus = 'TODOS' | StatusImovel;
   standalone: true,
   providers: [ConfirmationService, MessageService],
   imports: [
-    DecimalPipe, ReactiveFormsModule,
+    DecimalPipe, ReactiveFormsModule, FormsModule,
     ButtonModule, TableModule, DialogModule, TagModule, ToastModule,
     InputTextModule, InputNumberModule, SelectModule, DatePickerModule,
-    TextareaModule, DividerModule, ConfirmPopupModule, TooltipModule,
+    TextareaModule, DividerModule, ConfirmPopupModule, TooltipModule, CheckboxModule,
     AnexosPanelComponent,
   ],
   template: `
@@ -150,10 +152,42 @@ type FiltroStatus = 'TODOS' | StatusImovel;
             optionLabel="label" optionValue="value"
             placeholder="Selecione" class="w-full" />
         </div>
-        <div class="field">
-          <label>Matrícula</label>
+        <div class="field full">
+          <label>Matrícula Principal</label>
           <input pInputText formControlName="matricula" placeholder="Nº de matrícula no cartório" class="w-full" />
         </div>
+
+        @if (editandoId()) {
+          <div class="field full">
+            <div class="matriculas-header">
+              <label>Matrículas Adicionais</label>
+              <p-button icon="pi pi-plus" [text]="true" size="small" label="Adicionar"
+                (onClick)="abrirNovaMatricula()" />
+            </div>
+            @if (matriculas().length > 0) {
+              <div class="matriculas-lista">
+                @for (m of matriculas(); track m.id) {
+                  <div class="matricula-item" [class.principal]="m.principal">
+                    <div class="matricula-info">
+                      <i class="pi pi-id-card"></i>
+                      <span class="matricula-num">{{ m.numero }}</span>
+                      @if (m.descricao) { <span class="matricula-desc">— {{ m.descricao }}</span> }
+                      @if (m.principal) { <span class="badge-principal">Principal</span> }
+                    </div>
+                    <div class="matricula-acoes">
+                      @if (!m.principal) {
+                        <p-button icon="pi pi-star" [text]="true" size="small"
+                          pTooltip="Definir como principal" (onClick)="definirPrincipal(m.id)" />
+                        <p-button icon="pi pi-trash" [text]="true" size="small" severity="danger"
+                          pTooltip="Remover" (onClick)="removerMatricula(m.id)" />
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+        }
         <div class="field full">
           <label>Descrição *</label>
           <input pInputText formControlName="descricao" placeholder="Ex: Apartamento Avenida Paulista" class="w-full" />
@@ -270,6 +304,30 @@ type FiltroStatus = 'TODOS' | StatusImovel;
         [deletarFn]="deletarAnexo"
         [downloadUrlFn]="downloadUrl"
       />
+
+      <p-divider />
+      <div class="form-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem">
+          <h4 class="form-section-title" style="margin:0">Lançamentos Vinculados</h4>
+          @if (carregandoLancamentos()) {
+            <i class="pi pi-spin pi-spinner" style="font-size:0.85rem;color:var(--p-surface-400)"></i>
+          }
+        </div>
+        @if (lancamentosImovel().length === 0) {
+          <p class="lancamentos-vazio">Nenhum lançamento vinculado a este imóvel.</p>
+        } @else {
+          <div class="lancamentos-lista">
+            @for (lct of lancamentosImovel(); track lct.id) {
+              <div class="lancamento-item" [class.lct-pago]="lct.status === 'pago'" [class.lct-cancelado]="lct.status === 'cancelado'">
+                <span class="lct-data">{{ formatData(lct.data_vencimento) }}</span>
+                <span class="lct-desc">{{ lct.descricao }}</span>
+                <span class="lct-valor" [class.lct-receita]="lct.tipo === 'RECEITA'">{{ formatMoeda(lct.valor) }}</span>
+                <span class="lct-status">{{ lct.status }}</span>
+              </div>
+            }
+          </div>
+        }
+      </div>
     }
 
     <div class="dialog-footer">
@@ -277,6 +335,26 @@ type FiltroStatus = 'TODOS' | StatusImovel;
       <p-button [label]="editandoId() ? 'Salvar' : 'Cadastrar'" type="submit" [loading]="salvando()" />
     </div>
   </form>
+</p-dialog>
+
+<!-- Dialog: Nova Matrícula -->
+<p-dialog header="Adicionar Matrícula" [(visible)]="dialogMatricula" [modal]="true" [style]="{ width: '420px' }" [draggable]="true">
+  <div class="field" style="margin-bottom:1rem">
+    <label>Número da Matrícula *</label>
+    <input pInputText [(ngModel)]="novaMatriculaNumero" placeholder="Ex: 12.345" class="w-full" />
+  </div>
+  <div class="field" style="margin-bottom:1rem">
+    <label>Descrição (opcional)</label>
+    <input pInputText [(ngModel)]="novaMatriculaDescricao" placeholder="Ex: Lote A, Torre 2..." class="w-full" />
+  </div>
+  <div style="display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem">
+    <p-checkbox [(ngModel)]="novaMatriculaPrincipal" [binary]="true" inputId="mat-principal" />
+    <label for="mat-principal">Definir como matrícula principal</label>
+  </div>
+  <ng-template pTemplate="footer">
+    <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="dialogMatricula.set(false)" />
+    <p-button label="Adicionar" icon="pi pi-plus" [disabled]="!novaMatriculaNumero.trim()" [loading]="salvandoMatricula()" (onClick)="salvarMatricula()" />
+  </ng-template>
 </p-dialog>
   `,
   styles: [`
@@ -300,8 +378,27 @@ type FiltroStatus = 'TODOS' | StatusImovel;
     .field.full { grid-column: 1 / -1; }
     label { font-size: 0.875rem; font-weight: 500; }
     .dialog-footer { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--p-surface-200); }
+    .lancamentos-vazio { font-size: 0.85rem; color: var(--p-surface-400); margin: 0; }
+    .lancamentos-lista { display: flex; flex-direction: column; gap: 0.25rem; max-height: 200px; overflow-y: auto; }
+    .lancamento-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid var(--p-surface-200); font-size: 0.82rem; }
+    .lancamento-item.lct-pago { opacity: 0.7; }
+    .lancamento-item.lct-cancelado { opacity: 0.45; text-decoration: line-through; }
+    .lct-data { color: var(--p-surface-500); white-space: nowrap; min-width: 70px; }
+    .lct-desc { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .lct-valor { white-space: nowrap; font-weight: 600; }
+    .lct-receita { color: var(--p-green-600); }
+    .lct-status { font-size: 0.75rem; color: var(--p-surface-400); white-space: nowrap; }
     .cep-row { position: relative; display: flex; align-items: center; }
     .cep-spinner { position: absolute; right: 0.5rem; color: var(--p-surface-400); }
+    .matriculas-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; }
+    .matriculas-lista { display: flex; flex-direction: column; gap: 0.4rem; }
+    .matricula-item { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; border: 1px solid var(--p-surface-200); border-radius: 8px; }
+    .matricula-item.principal { border-color: var(--p-primary-300); background: var(--p-primary-50); }
+    .matricula-info { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; }
+    .matricula-num { font-weight: 600; }
+    .matricula-desc { color: var(--p-surface-500); }
+    .badge-principal { background: var(--p-primary-color); color: white; font-size: 0.7rem; padding: 0.1rem 0.5rem; border-radius: 10px; font-weight: 700; }
+    .matricula-acoes { display: flex; gap: 0.25rem; }
   `],
 })
 export class ImoveisComponent {
@@ -321,6 +418,8 @@ export class ImoveisComponent {
   protected readonly mostrarInativos = signal(false);
   protected readonly dialogVisivel = signal(false);
   protected readonly editandoId = signal<string | null>(null);
+  protected readonly lancamentosImovel = signal<Lancamento[]>([]);
+  protected readonly carregandoLancamentos = signal(false);
 
   protected readonly listaFiltrada = computed(() => {
     const status = this.filtroStatus();
@@ -439,6 +538,9 @@ export class ImoveisComponent {
 
   protected abrirEditar(im: Imovel): void {
     this.editandoId.set(im.id);
+    this.matriculas.set([]);
+    this.carregarMatriculas(im.id);
+    this.carregarLancamentosImovel(im.id);
     this.form.reset({
       tipo: im.tipo,
       descricao: im.descricao,
@@ -594,12 +696,92 @@ export class ImoveisComponent {
     return m[s] ?? s;
   }
 
+  private carregarLancamentosImovel(id: string): void {
+    this.carregandoLancamentos.set(true);
+    this.lancamentosImovel.set([]);
+    this.svc.listarLancamentosImovel(id).subscribe({
+      next: (data) => { this.lancamentosImovel.set(data); this.carregandoLancamentos.set(false); },
+      error: () => this.carregandoLancamentos.set(false),
+    });
+  }
+
   protected formatMoeda(v: number | null): string {
     if (v == null) return '—';
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(v));
   }
 
+  protected formatData(d: string | null): string {
+    if (!d) return '—';
+    const [y, m, day] = d.split('-');
+    return `${day}/${m}/${y}`;
+  }
+
   private toISO(d: Date): string {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  // ── Matrículas ────────────────────────────────────────────────────────────
+
+  protected readonly matriculas = signal<{ id: string; numero: string; descricao: string | null; principal: boolean }[]>([]);
+  protected readonly dialogMatricula = signal(false);
+  protected readonly salvandoMatricula = signal(false);
+  protected novaMatriculaNumero = '';
+  protected novaMatriculaDescricao = '';
+  protected novaMatriculaPrincipal = false;
+
+  private readonly apiBase = `${environment.apiUrl}/patrimonio/imoveis`;
+
+  private carregarMatriculas(imovelId: string): void {
+    this.http.get<any[]>(`${this.apiBase}/${imovelId}/matriculas`).subscribe({
+      next: (data) => this.matriculas.set(data),
+      error: () => {},
+    });
+  }
+
+  protected abrirNovaMatricula(): void {
+    this.novaMatriculaNumero = '';
+    this.novaMatriculaDescricao = '';
+    this.novaMatriculaPrincipal = false;
+    this.dialogMatricula.set(true);
+  }
+
+  protected salvarMatricula(): void {
+    const imovelId = this.editandoId();
+    if (!imovelId || !this.novaMatriculaNumero.trim()) return;
+    this.salvandoMatricula.set(true);
+    this.http.post<any>(`${this.apiBase}/${imovelId}/matriculas`, {
+      numero: this.novaMatriculaNumero.trim(),
+      descricao: this.novaMatriculaDescricao.trim() || null,
+      principal: this.novaMatriculaPrincipal,
+    }).subscribe({
+      next: () => {
+        this.salvandoMatricula.set(false);
+        this.dialogMatricula.set(false);
+        this.carregarMatriculas(imovelId);
+        this.messageSvc.add({ severity: 'success', summary: 'Matrícula adicionada.' });
+      },
+      error: (err) => {
+        this.salvandoMatricula.set(false);
+        this.messageSvc.add({ severity: 'error', summary: err?.error?.detail ?? 'Erro ao adicionar.' });
+      },
+    });
+  }
+
+  protected definirPrincipal(matriculaId: string): void {
+    const imovelId = this.editandoId();
+    if (!imovelId) return;
+    this.http.patch<any>(`${this.apiBase}/${imovelId}/matriculas/${matriculaId}/principal`, {}).subscribe({
+      next: () => { this.carregarMatriculas(imovelId); this.messageSvc.add({ severity: 'success', summary: 'Matrícula principal definida.' }); },
+      error: () => this.messageSvc.add({ severity: 'error', summary: 'Erro ao definir principal.' }),
+    });
+  }
+
+  protected removerMatricula(matriculaId: string): void {
+    const imovelId = this.editandoId();
+    if (!imovelId) return;
+    this.http.delete(`${this.apiBase}/${imovelId}/matriculas/${matriculaId}`).subscribe({
+      next: () => { this.carregarMatriculas(imovelId); this.messageSvc.add({ severity: 'success', summary: 'Matrícula removida.' }); },
+      error: (err) => this.messageSvc.add({ severity: 'error', summary: err?.error?.detail ?? 'Erro ao remover.' }),
+    });
   }
 }

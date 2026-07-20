@@ -31,7 +31,7 @@ class ContatoService:
         contato = await self._repo.get_by_id(contato_id)
         if contato is None:
             raise NotFoundError("Contato não encontrado.")
-        if contato.usuario_id != usuario_id:
+        if not await self._repo.tem_acesso(contato_id, usuario_id):
             raise PermissionDeniedError("Sem acesso a este contato.")
         return contato
 
@@ -124,6 +124,34 @@ class ContatoService:
         await self._repo.commit()
         await self._repo.refresh(contato)
         return contato
+
+    async def merge(
+        self,
+        origem_id: uuid.UUID,
+        destino_id: uuid.UUID,
+        usuario_id: uuid.UUID,
+    ) -> Contato:
+        from app.modules.lancamento.models import Lancamento
+        from sqlalchemy import update
+
+        origem = await self.obter(origem_id, usuario_id)
+        destino = await self.obter(destino_id, usuario_id)
+
+        if origem_id == destino_id:
+            raise DomainError("Origem e destino devem ser diferentes.")
+
+        # Reassociar lançamentos
+        await self._repo._db.execute(
+            update(Lancamento)
+            .where(Lancamento.contato_id == origem_id)
+            .values(contato_id=destino_id)
+        )
+
+        # Inativar o contato de origem
+        origem.ativa = False
+        await self._repo.commit()
+        await self._repo.refresh(destino)
+        return destino
 
 
 def _validar_doc_por_tipo(documento: str, tipo: TipoContato) -> None:

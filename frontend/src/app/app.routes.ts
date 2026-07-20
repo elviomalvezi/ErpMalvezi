@@ -37,6 +37,13 @@ export const routes: Routes = [
         data: { tipo: 'receita' },
       },
       {
+        path: 'extrato-bancario',
+        loadComponent: () =>
+          import('./features/extrato-bancario/extrato-bancario.component').then(
+            (m) => m.ExtratoBancarioComponent,
+          ),
+      },
+      {
         path: 'transferencias',
         loadComponent: () =>
           import('./features/transferencias/transferencias.component').then(
@@ -80,6 +87,18 @@ export const routes: Routes = [
           import('./features/empresas/empresas.component').then((m) => m.EmpresasComponent),
       },
       {
+        path: 'certificados',
+        loadComponent: () =>
+          import('./features/certificados/certificados.component').then(
+            (m) => m.CertificadosComponent,
+          ),
+      },
+      {
+        path: 'pessoas',
+        loadComponent: () =>
+          import('./features/pessoas/pessoas.component').then((m) => m.PessoasComponent),
+      },
+      {
         path: 'usuarios',
         loadComponent: () =>
           import('./features/usuarios/usuarios.component').then((m) => m.UsuariosComponent),
@@ -114,6 +133,26 @@ export const routes: Routes = [
           import('./features/configuracoes/configuracoes.component').then(
             (m) => m.ConfiguracoesComponent,
           ),
+      },
+      {
+        path: 'inadimplencia',
+        loadComponent: () =>
+          import('./features/inadimplencia/inadimplencia.component').then((m) => m.InadimplenciaComponent),
+      },
+      {
+        path: 'importacao',
+        loadComponent: () =>
+          import('./features/importacao/importacao.component').then((m) => m.ImportacaoComponent),
+      },
+      {
+        path: 'relatorios',
+        loadComponent: () =>
+          import('./features/relatorios/relatorios.component').then((m) => m.RelatoriosComponent),
+      },
+      {
+        path: 'ajuda',
+        loadComponent: () =>
+          import('./features/ajuda/ajuda.component').then((m) => m.AjudaComponent),
       },
     ],
   },

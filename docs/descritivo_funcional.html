@@ -1,0 +1,296 @@
+<title>SistemaERP — Descritivo Funcional</title>
+<style>
+  :root {
+    --paper: #f7f9f8;
+    --card: #ffffff;
+    --ink: #1c2622;
+    --ink-2: #51605b;
+    --line: #dde5e1;
+    --accent: #14675a;
+    --accent-soft: #e3efec;
+    --ok: #1e7a3c;
+    --ok-soft: #e2f2e6;
+    --plan: #33506b;
+    --plan-soft: #e5ecf4;
+    --opt: #8a5a12;
+    --opt-soft: #f6ecd9;
+    --fut: #6b6f6d;
+    --fut-soft: #ececec;
+    --mono: "Cascadia Code", Consolas, "Courier New", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #131917; --card: #1b2320; --ink: #e4ebe8; --ink-2: #9aa8a2;
+      --line: #2c3733; --accent: #4fb3a1; --accent-soft: #1d2f2b;
+      --ok: #62c07f; --ok-soft: #1c2f22; --plan: #8fb0d4; --plan-soft: #1f2a36;
+      --opt: #d9a94f; --opt-soft: #322817; --fut: #8f9693; --fut-soft: #242826;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #131917; --card: #1b2320; --ink: #e4ebe8; --ink-2: #9aa8a2;
+    --line: #2c3733; --accent: #4fb3a1; --accent-soft: #1d2f2b;
+    --ok: #62c07f; --ok-soft: #1c2f22; --plan: #8fb0d4; --plan-soft: #1f2a36;
+    --opt: #d9a94f; --opt-soft: #322817; --fut: #8f9693; --fut-soft: #242826;
+  }
+  :root[data-theme="light"] {
+    --paper: #f7f9f8; --card: #ffffff; --ink: #1c2622; --ink-2: #51605b;
+    --line: #dde5e1; --accent: #14675a; --accent-soft: #e3efec;
+    --ok: #1e7a3c; --ok-soft: #e2f2e6; --plan: #33506b; --plan-soft: #e5ecf4;
+    --opt: #8a5a12; --opt-soft: #f6ecd9; --fut: #6b6f6d; --fut-soft: #ececec;
+  }
+
+  body { background: var(--paper); color: var(--ink); font: 16px/1.6 "Segoe UI", system-ui, sans-serif; margin: 0; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header.top { border-bottom: 3px solid var(--accent); padding-bottom: 22px; margin-bottom: 30px; }
+  .eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  h1 { font-size: 34px; line-height: 1.15; margin: 6px 0 8px; text-wrap: balance; }
+  .lede { color: var(--ink-2); max-width: 62ch; margin: 0; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
+  .p-ok   { background: var(--ok-soft);   color: var(--ok); }
+  .p-plan { background: var(--plan-soft); color: var(--plan); }
+  .p-opt  { background: var(--opt-soft);  color: var(--opt); }
+  .p-fut  { background: var(--fut-soft);  color: var(--fut); }
+
+  nav.toc { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin-bottom: 34px; }
+  nav.toc strong { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); }
+  nav.toc ol { columns: 2; gap: 28px; margin: 8px 0 0; padding-left: 20px; }
+  nav.toc li { break-inside: avoid; padding: 1px 0; }
+  nav.toc a { color: var(--accent); text-decoration: none; }
+  nav.toc a:hover, nav.toc a:focus { text-decoration: underline; }
+  @media (max-width: 640px) { nav.toc ol { columns: 1; } }
+
+  section.dominio { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 22px 26px; margin-bottom: 22px; }
+  section.dominio h2 { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 21px; margin: 0 0 4px; }
+  section.dominio h2 .num { font-family: var(--mono); font-size: 13px; color: var(--ink-2); }
+  .resumo { color: var(--ink-2); margin: 4px 0 14px; max-width: 68ch; }
+
+  ul.feats { margin: 0; padding-left: 20px; }
+  ul.feats li { margin: 5px 0; }
+  ul.feats b { font-weight: 600; }
+
+  .fluxo { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 14px 0; }
+  .fluxo .etapa { background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 13.5px; padding: 5px 12px; border-radius: 6px; white-space: nowrap; }
+  .fluxo .seta { color: var(--ink-2); }
+
+  .nota { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 10px 14px; border-radius: 0 8px 8px 0; margin: 14px 0 4px; font-size: 14.5px; }
+  .nota b { color: var(--accent); }
+
+  h3.sub { font-size: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin: 18px 0 6px; }
+  code { font-family: var(--mono); font-size: 13.5px; background: var(--accent-soft); padding: 1px 5px; border-radius: 4px; }
+
+  footer.rodape { margin-top: 36px; color: var(--ink-2); font-size: 14px; border-top: 1px solid var(--line); padding-top: 16px; }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">Descritivo Funcional · v1 · julho 2026</div>
+    <h1>SistemaERP — ERP modular para pequenas e médias empresas</h1>
+    <p class="lede">Plataforma multi-empresa (PJ e PF) operada de forma centralizada. Núcleo Financeiro pronto; demais domínios habilitáveis por empresa, todos convergindo no Financeiro com rastreabilidade e auditoria completas.</p>
+    <div class="legend">
+      <span class="pill p-ok">Disponível</span>
+      <span class="pill p-plan">Planejado</span>
+      <span class="pill p-opt">Opcional</span>
+    </div>
+  </header>
+
+  <nav class="toc">
+    <strong>Domínios</strong>
+    <ol>
+      <li><a href="#plataforma">Plataforma</a></li>
+      <li><a href="#financeiro">Financeiro</a></li>
+      <li><a href="#cadastros">Cadastros</a></li>
+      <li><a href="#estoque">Estoque</a></li>
+      <li><a href="#compras">Compras</a></li>
+      <li><a href="#vendas">Vendas e Faturamento</a></li>
+      <li><a href="#fiscal">Fiscal — Central Fiscal</a></li>
+      <li><a href="#servicos">Serviços e Locação</a></li>
+      <li><a href="#contabilidade">Contabilidade (opcional)</a></li>
+      <li><a href="#rh">RH — Folha (opcional)</a></li>
+      <li><a href="#crm">CRM (opcional)</a></li>
+      <li><a href="#contratos">Gestão de Contratos (opcional)</a></li>
+      <li><a href="#ia">Integração com IA (opcional)</a></li>
+      <li><a href="#producao">Produção (futuro)</a></li>
+    </ol>
+  </nav>
+
+  <section class="dominio" id="plataforma">
+    <h2><span class="num">01</span> Plataforma <span class="pill p-ok">Disponível</span></h2>
+    <p class="resumo">Base compartilhada por todos os domínios.</p>
+    <ul class="feats">
+      <li><b>Multi-empresa</b>: várias empresas (CNPJ ou CPF) numa conta; cadastros com escopo global ou específico; visão simultânea opcional.</li>
+      <li><b>Entrada com contexto</b>: após o login, informa Data base, Empresa (por código, ex.: <code>001</code>) e Módulo — trocáveis sem relogar.</li>
+      <li><b>Administração de acessos</b>: matriz usuário × menu × ação em árvore módulo → menu → ações; concessão por empresa ou global; cópia entre usuários; usuário novo nasce sem acesso.</li>
+      <li><b>Auditoria</b> em toda alteração financeira (quem, quando, valor anterior/novo); <b>soft delete</b> — nada com histórico é excluído.</li>
+      <li>Notificações (e-mail/sistema), busca global, certificado digital A1, anexos em storage S3/MinIO.</li>
+    </ul>
+  </section>
+
+  <section class="dominio" id="financeiro">
+    <h2><span class="num">02</span> Financeiro <span class="pill p-ok">Disponível</span></h2>
+    <p class="resumo">Núcleo do ERP — ponto de convergência de todos os domínios. Regime de caixa.</p>
+    <ul class="feats">
+      <li><b>Contas a pagar e receber</b>: parcelamento, recorrência, baixa parcial, anexos, tags, trava de fechamento mensal.</li>
+      <li><b>Contas bancárias e cartões</b>: corrente, poupança, caixinha, aplicação; cartão com fatura, parcelamento e pagamento gerando a saída de caixa real.</li>
+      <li><b>Conciliação bancária OFX/CSV</b> com aprendizado de categorização; extrato bancário; importação em lote.</li>
+      <li><b>Transferências</b> atômicas entre contas, intra e inter-empresa; duplicar/transferir lançamentos entre empresas.</li>
+      <li><b>Fluxo de caixa</b> realizado, previsto e projetado; inadimplência; dashboard; DRE gerencial e relatórios.</li>
+      <li><b>Patrimonial</b>: imóveis (matrículas múltiplas) e veículos, com vínculo a lançamentos; recebe equipamentos ativados pela compra.</li>
+    </ul>
+    <h3 class="sub">Evolução planejada — Integração bancária</h3>
+    <ul class="feats">
+      <li><b>Cobrança registrada</b>: contas a receber gera remessa <b>CNAB 240</b> de boletos registrados (com QR Pix híbrido); importação do retorno faz <b>baixa automática</b> (registro, liquidação, baixa, protesto).</li>
+      <li><b>Pagamento eletrônico</b>: seleção de títulos a pagar → remessa CNAB 240 por banco/empresa → aprovação no banco → retorno confirma e baixa. Elimina digitação no internet banking, multi-empresa.</li>
+      <li><b>Adapter <code>CobrancaProvider</code></b>: preparado para evoluir de arquivo CNAB para API bancária ou agregador multi-banco com webhook de liquidação, sem mudar o domínio.</li>
+      <li><b>Banco Cora <span class="pill p-opt">Opcional</span></b>: integração direta via API oficial — boleto registrado com QR Pix híbrido, multa/juros/descontos e <b>webhook de liquidação</b> (baixa automática em tempo real, sem arquivo de retorno). Habilitável por empresa que opere conta Cora.</li>
+    </ul>
+  </section>
+
+  <section class="dominio" id="cadastros">
+    <h2><span class="num">03</span> Cadastros <span class="pill p-plan">Planejado — Fase 1</span></h2>
+    <p class="resumo">Dados mestres compartilhados. Pré-requisito de todos os domínios novos.</p>
+    <ul class="feats">
+      <li><b>Produtos e serviços</b>: tipos produto, serviço, kit e imobilizado; NCM, CFOP, CSTs legados e já os campos da Reforma Tributária (CST-IBS/CBS, <code>cClassTrib</code>).</li>
+      <li><b>Produtos × Fornecedores</b>: código e descrição no fornecedor, unidade com fator de conversão (CX12 → UN), último preço, prazo de entrega. Resolve o de-para da importação de XML e alimenta cotações.</li>
+      <li><b>Centros de custo</b>: usados por Compras, Vendas, lançamentos financeiros e Contabilidade.</li>
+      <li>Unidades de medida, tabelas de preço, transportadoras.</li>
+      <li>Clientes e fornecedores (tabela unificada de contatos, já disponível) com consulta CNPJ.</li>
+    </ul>
+  </section>
+
+  <section class="dominio" id="estoque">
+    <h2><span class="num">04</span> Estoque <span class="pill p-plan">Planejado — Fase 2</span></h2>
+    <ul class="feats">
+      <li>Múltiplos depósitos por empresa; saldos por depósito.</li>
+      <li>Movimentações de entrada, saída, ajuste e transferência entre depósitos (atômicas, como as transferências bancárias).</li>
+      <li>Custo médio; inventário com contagem e acerto; alertas de estoque mínimo gerando sugestão de solicitação de compra.</li>
+    </ul>
+  </section>
+
+  <section class="dominio" id="compras">
+    <h2><span class="num">05</span> Compras <span class="pill p-plan">Planejado — Fase 3</span></h2>
+    <div class="fluxo">
+      <span class="etapa">Solicitação</span><span class="seta">→</span>
+      <span class="etapa">Cotação</span><span class="seta">→</span>
+      <span class="etapa">Pedido</span><span class="seta">→</span>
+      <span class="etapa">Aprovação por alçada</span><span class="seta">→</span>
+      <span class="etapa">Recebimento</span><span class="seta">→</span>
+      <span class="etapa">Pagar + Estoque</span>
+    </div>
+    <ul class="feats">
+      <li><b>Solicitação de compra</b>: manual ou gerada por estoque mínimo; item, quantidade, centro de custo, justificativa.</li>
+      <li><b>Cotação</b>: mapa comparativo de N fornecedores (preço, prazo, frete), vencedor por item ou global, pré-preenchido por Produtos × Fornecedores. Etapas puláveis por configuração (compra direta).</li>
+      <li><b>Pedido de compra</b>: centro de custo obrigatório por item; destino <code>estoque</code> ou <code>imobilizado</code> (ativa o bem no Patrimonial).</li>
+      <li><b>Aprovação por alçada</b> (estilo Protheus): grupos de aprovação por empresa, níveis 1..N com limite de valor, aprovadores com substituto e vigência; rejeição devolve com motivo; alteração de valor reinicia o fluxo; painel de aprovações pendentes multi-empresa.</li>
+      <li><b>Importação de XML de NF-e</b>: upload ou captura automática; de-para de produtos com aprendizado; duplicatas do XML viram parcelas do contas a pagar.</li>
+      <li><b>Impostos na entrada</b>: o sistema captura, valida e classifica (não recalcula). Tipo de Operação de Entrada (equivalente à TES) define crédito × custo por regime tributário da empresa; formação de custo inclui frete, seguro, IPI/ST não recuperáveis.</li>
+    </ul>
+    <div class="nota"><b>Parâmetro por empresa:</b> "nota exige pedido" — nenhuma NF-e entra sem vínculo com pedido aprovado; conferência de itens, quantidades e preços com tolerâncias configuráveis.</div>
+  </section>
+
+  <section class="dominio" id="vendas">
+    <h2><span class="num">06</span> Vendas e Faturamento <span class="pill p-plan">Planejado — Fase 4</span></h2>
+    <div class="fluxo">
+      <span class="etapa">Orçamento</span><span class="seta">→</span>
+      <span class="etapa">Pedido de venda</span><span class="seta">→</span>
+      <span class="etapa">Faturamento</span><span class="seta">→</span>
+      <span class="etapa">NF-e/NFS-e + Receber + Baixa estoque</span>
+    </div>
+    <ul class="feats">
+      <li><b>Orçamento</b>: validade, versões, envio ao cliente (PDF/link); aprovado vira pedido com um clique.</li>
+      <li><b>Pedido de venda</b>: reserva de estoque; análise de crédito com limite por cliente e consulta à inadimplência (bloqueio ou liberação); TES de saída define CFOP, movimentação e tributação.</li>
+      <li><b>Faturamento total ou parcial</b>: um pedido, N entregas/notas; contas a receber com parcelamento da condição de pagamento.</li>
+      <li><b>Impostos na saída — o sistema calcula</b>: motor fiscal próprio (ICMS/ST/DIFAL, IPI, PIS/COFINS + IBS/CBS na transição da reforma), parametrizado por produto, TES, regime da empresa, UFs e cliente.</li>
+      <li><b>Comissões</b> por vendedor, liquidadas sobre o recebido (configurável); <b>devoluções</b> com NF-e referenciada e estorno proporcional.</li>
+    </ul>
+  </section>
+
+  <section class="dominio" id="fiscal">
+    <h2><span class="num">07</span> Fiscal — Central Fiscal multi-CNPJ <span class="pill p-plan">Planejado — Fase 5</span></h2>
+    <p class="resumo">Cockpit único para todas as empresas do grupo. Tudo via API de terceiros — sem middleware fiscal local (sem TSS); certificado A1 no provedor; XMLs sempre copiados no nosso storage (guarda 5+ anos).</p>
+    <ul class="feats">
+      <li><b>NF-e entrada</b>: monitor Distribuição DF-e por CNPJ; manifestação do destinatário (ciência, confirmação, desconhecimento, não realizada) com controle de prazo; fila unificada alimentando Compras.</li>
+      <li><b>NF-e saída</b>: emissão, Carta de Correção, cancelamento, inutilização, DANFE; nota autorizada trava o documento de origem.</li>
+      <li><b>NFS-e padrão nacional</b>: Emissor Nacional/ADN como caminho principal (obrigatório p/ municípios desde 01/2026; Simples emite exclusivamente por ele desde 09/2026); ADN também distribui serviços tomados.</li>
+      <li><b>Reforma Tributária</b>: conformidade NT 2025.002 — CST-IBS/CBS e cClassTrib obrigatórios em produção desde 03/08/2026 (Regime Normal).</li>
+      <li>Apuração de créditos/débitos e exportação para o contador.</li>
+    </ul>
+  </section>
+
+  <section class="dominio" id="servicos">
+    <h2><span class="num">08</span> Serviços e Locação de Equipamentos <span class="pill p-plan">Planejado — Fase 7</span></h2>
+    <ul class="feats">
+      <li><b>Ordens de serviço</b>: abertura, execução, apontamento, faturamento como NFS-e.</li>
+      <li><b>Contratos recorrentes</b> com faturamento automático (motor de recorrência já existente); agendamento.</li>
+      <li><b>Locação de equipamentos</b>: equipamentos vêm do Patrimonial; contrato com itens e período; agenda de disponibilidade e reservas (sem dupla locação); faturamento recorrente → contas a receber; devolução com vistoria (avarias → cobrança extra); manutenção.</li>
+    </ul>
+    <div class="nota"><b>Fiscal da locação:</b> locação de bem móvel não incide ISS (Súmula Vinculante 31) — emite-se fatura de locação; serviços acoplados (operador, montagem) saem como NFS-e.</div>
+  </section>
+
+  <section class="dominio" id="contabilidade">
+    <h2><span class="num">09</span> Contabilidade <span class="pill p-opt">Opcional</span> <span class="pill p-plan">Fase 6</span></h2>
+    <ul class="feats">
+      <li>Plano de contas contábil hierárquico, separado das categorias gerenciais.</li>
+      <li><b>Contabilização automática</b>: regras mapeiam eventos do Financeiro, Fiscal e Folha para partidas dobradas (sempre balanceadas); lançamentos manuais complementam.</li>
+      <li>Diário, razão, balancete, balanço patrimonial e DRE contábil; encerramento de exercício com trava.</li>
+      <li>SPED Contábil (ECD) e ECF — exportação para o contador; API de terceiros como evolução.</li>
+    </ul>
+  </section>
+
+  <section class="dominio" id="rh">
+    <h2><span class="num">10</span> RH — Folha completa <span class="pill p-opt">Opcional</span> <span class="pill p-plan">Fase 8</span></h2>
+    <ul class="feats">
+      <li>Colaboradores, cargos, férias e ausências (com reflexo nos aprovadores substitutos de Compras).</li>
+      <li><b>Motor de folha</b>: proventos, descontos, encargos; provisões e lançamentos previstos no Financeiro por colaborador e centro de custo.</li>
+      <li><b>eSocial via API de terceiros</b> (adapter <code>EsocialProvider</code>) — sem transmissor próprio.</li>
+    </ul>
+  </section>
+
+  <section class="dominio" id="crm">
+    <h2><span class="num">11</span> CRM <span class="pill p-opt">Opcional</span> <span class="pill p-plan">Fase 9 — última planejada</span></h2>
+    <ul class="feats">
+      <li>Funil de vendas com etapas configuráveis; oportunidades com valor e probabilidade.</li>
+      <li>Atividades e follow-up; histórico completo do cliente (pedidos, títulos, inadimplência).</li>
+      <li>Oportunidade ganha vira orçamento/pedido de venda com um clique.</li>
+    </ul>
+  </section>
+
+  <section class="dominio" id="contratos">
+    <h2><span class="num">12</span> Gestão de Contratos <span class="pill p-opt">Opcional</span> <span class="pill p-plan">Planejado</span></h2>
+    <p class="resumo">Inspirado no SIGAGCT: contratos de compra e de venda com controle de saldo e medições.</p>
+    <ul class="feats">
+      <li><b>Contrato</b> com vigência, objeto, valor global, cronograma físico-financeiro e planilha de itens/serviços.</li>
+      <li><b>Medições</b> periódicas: apontamento do executado → aprovação (alçada) → gera pedido/faturamento e o lançamento financeiro correspondente.</li>
+      <li><b>Aditivos</b> de valor e de prazo; <b>reajustes</b> por índice (IGP-M, IPCA, INCC); revisões com histórico.</li>
+      <li><b>Saldo de contrato</b>: consumido a cada medição, bloqueando estouro sem aditivo.</li>
+      <li><b>Cauções e garantias</b> (seguro-garantia, retenções) com controle de vencimento; alertas de término de vigência.</li>
+    </ul>
+  </section>
+
+  <section class="dominio" id="ia">
+    <h2><span class="num">13</span> Integração com IA <span class="pill p-opt">Opcional</span> <span class="pill p-plan">Transversal</span></h2>
+    <p class="resumo">Camada transversal sobre os demais domínios — assistiva, nunca autônoma: sugestões sempre confirmadas pelo usuário.</p>
+    <ul class="feats">
+      <li><b>Categorização automática</b> de lançamentos e sugestão de conciliação bancária (evolui o aprendizado já existente).</li>
+      <li><b>Leitura de documentos</b>: boletos, notas, comprovantes e contratos anexados viram dados estruturados (pré-lançamento).</li>
+      <li><b>Assistente em linguagem natural</b>: "quanto gastei com manutenção da frota no trimestre?" — consultas respondidas com dados do próprio ERP, respeitando permissões.</li>
+      <li><b>Previsão de fluxo de caixa</b> e detecção de anomalias (lançamento fora do padrão, duplicidade provável).</li>
+    </ul>
+  </section>
+
+  <section class="dominio" id="producao">
+    <h2><span class="num">14</span> Produção — PCP light <span class="pill p-opt">Opcional</span></h2>
+    <ul class="feats">
+      <li>Ficha técnica (BOM) com composição de materiais e custo do produto acabado.</li>
+      <li>Ordens de produção: reserva/baixa de insumos no estoque, entrada do acabado com custo apurado.</li>
+      <li>Apontamento de produção e perdas.</li>
+    </ul>
+  </section>
+
+  <footer class="rodape">
+    <p><b>Ordem de implementação:</b> Fase 0 (consolidação, entrada por código, admin de acessos) → Cadastros → Estoque → Compras → Vendas → Fiscal → Contabilidade → Serviços/Locação → RH → CRM. Gestão de Contratos, IA e Produção entram como opcionais conforme prioridade do negócio.</p>
+    <p>Decisões firmadas: fiscal 100% via API de terceiros (sem TSS) · NFS-e no padrão nacional · PDV fora do escopo · folha completa com eSocial via API · CRM por último · regime de caixa no financeiro · soft delete e auditoria universais.</p>
+  </footer>
+</div>

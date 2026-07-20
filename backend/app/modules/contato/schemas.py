@@ -96,6 +96,24 @@ class ContatoUpdate(BaseModel):
         return normalizar_documento(str(v))
 
 
+class ConsultaCnpjResponse(BaseModel):
+    """Dados de um CNPJ consultado na BrasilAPI, prontos para preencher o contato."""
+
+    documento: str
+    nome_principal: str | None = None
+    nome_alternativo: str | None = None
+    email: str | None = None
+    telefone: str | None = None
+    cep: str | None = None
+    logradouro: str | None = None
+    numero: str | None = None
+    complemento: str | None = None
+    bairro: str | None = None
+    cidade: str | None = None
+    uf: str | None = None
+    situacao: str | None = None
+
+
 class ContatoResponse(BaseModel):
     model_config = {"from_attributes": True}
 

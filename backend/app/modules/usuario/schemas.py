@@ -17,6 +17,7 @@ class UsuarioCreate(BaseModel):
     nome: str = Field(min_length=2, max_length=200)
     email: EmailStr
     senha: str = Field(min_length=8, max_length=128)
+    gestor: bool = False
 
 
 class UsuarioUpdate(BaseModel):
@@ -47,6 +48,7 @@ class UsuarioResponse(BaseModel):
     email: str
     ativo: bool
     admin: bool
+    gestor: bool = False
     email_verificado: bool
     preferencia_multi_empresa: bool
     foto_url: str | None

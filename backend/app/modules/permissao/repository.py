@@ -83,13 +83,17 @@ class PermissaoRepository:
 
     async def revogar(self, permissao: UsuarioPermissao) -> None:
         await self._db.delete(permissao)
+        await self._db.flush()
 
     async def revogar_todas_usuario(self, usuario_id: uuid.UUID) -> None:
-        result = await self._db.execute(
-            select(UsuarioPermissao).where(UsuarioPermissao.usuario_id == usuario_id)
+        from sqlalchemy import delete
+        await self._db.execute(
+            delete(UsuarioPermissao).where(UsuarioPermissao.usuario_id == usuario_id)
         )
-        for p in result.scalars():
-            await self._db.delete(p)
+        await self._db.flush()
+
+    async def commit(self) -> None:
+        await self._db.commit()
 
     async def verificar_permissao(
         self, usuario_id: uuid.UUID, menu_chave: str, acao_chave: str

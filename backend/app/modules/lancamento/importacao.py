@@ -10,7 +10,9 @@ from xml.etree import ElementTree
 
 from app.core.exceptions import DomainError
 
-_MAX_LINHAS_IMPORTACAO = 5000
+_MAX_LINHAS_IMPORTACAO = 100000
+# Anti zip-bomb: teto de tamanho descomprimido de cada membro do XLSX.
+_MAX_MEMBRO_DESCOMPRIMIDO = 80 * 1024 * 1024  # 80 MB por arquivo interno
 _PLANILHA_NS = {"a": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
 _CAMPOS_SUPORTADOS = {
     "descricao",
@@ -25,8 +27,12 @@ _CAMPOS_SUPORTADOS = {
     "contato_nome",
     "col_tipo",
     "col_empresa",
+    "conta_banco",
+    "conta_agencia",
+    "conta_numero",
 }
-_CAMPOS_OBRIGATORIOS = {"descricao", "valor", "data_competencia", "data_vencimento"}
+_CAMPOS_OBRIGATORIOS = {"descricao", "valor", "data_vencimento"}
+# data_competencia é opcional — se não mapeada, usa o valor de data_vencimento
 
 
 @dataclass(slots=True)
@@ -67,8 +73,7 @@ def validar_mapeamento(mapeamento: dict[str, str | None]) -> dict[str, str]:
         coluna_limpa = coluna.strip()
         if not coluna_limpa:
             continue
-        if coluna_limpa in colunas_usadas:
-            raise DomainError(f"A coluna '{coluna_limpa}' foi vinculada mais de uma vez.")
+        # Permite a mesma coluna ser usada em múltiplos campos (ex: DATA → vencimento e competência)
         normalizado[campo] = coluna_limpa
         colunas_usadas.add(coluna_limpa)
 
@@ -102,15 +107,9 @@ def normalizar_linhas(
 
         valor = _parse_decimal(linha.get(mapeamento["valor"]))
         if valor is None or valor == 0:
-            erros.append("Valor inválido.")
-        else:
-            payload["valor"] = abs(valor)
-
-        data_competencia = _parse_data(linha.get(mapeamento["data_competencia"]))
-        if data_competencia is None:
-            erros.append("Data de competência inválida.")
-        else:
-            payload["data_competencia"] = data_competencia
+            # Pula silenciosamente — valor zero, vazio ou "-" não é lançamento
+            continue
+        payload["valor"] = abs(valor)
 
         data_vencimento = _parse_data(linha.get(mapeamento["data_vencimento"]))
         if data_vencimento is None:
@@ -118,7 +117,18 @@ def normalizar_linhas(
         else:
             payload["data_vencimento"] = data_vencimento
 
-        for campo in ("observacoes", "categoria_nome", "contato_nome", "col_empresa"):
+        # data_competencia: usa mapeamento próprio ou fallback para data_vencimento
+        col_competencia = mapeamento.get("data_competencia")
+        if col_competencia:
+            data_competencia = _parse_data(linha.get(col_competencia))
+        else:
+            data_competencia = data_vencimento  # fallback
+        if data_competencia is None:
+            erros.append("Data de competência inválida.")
+        else:
+            payload["data_competencia"] = data_competencia
+
+        for campo in ("observacoes", "categoria_nome", "contato_nome", "col_empresa", "conta_banco", "conta_agencia", "conta_numero"):
             coluna = mapeamento.get(campo)
             if coluna is None:
                 continue
@@ -135,11 +145,25 @@ def normalizar_linhas(
 
         coluna_tipo = mapeamento.get("col_tipo")
         if coluna_tipo is not None:
-            val_tipo = (_valor_texto(linha.get(coluna_tipo)) or "").upper()
-            if val_tipo not in ("CAP", "CAR"):
-                erros.append("col_tipo deve ser CAP (despesa) ou CAR (receita).")
+            val_tipo = (_valor_texto(linha.get(coluna_tipo)) or "").strip().upper()
+            # Normaliza variantes para CAP/CAR
+            _MAP_TIPO = {
+                "CAP": "CAP", "CAR": "CAR",
+                "DESPESA": "CAP", "DESPESAS": "CAP", "D": "CAP",
+                "RECEITA": "CAR", "RECEITAS": "CAR", "R": "CAR",
+                "SAÍDA": "CAP", "SAIDA": "CAP",
+                "ENTRADA": "CAR",
+                "DÉBITO": "CAP", "DEBITO": "CAP",
+                "CRÉDITO": "CAR", "CREDITO": "CAR",
+            }
+            val_normalizado = _MAP_TIPO.get(val_tipo)
+            if val_normalizado is None:
+                erros.append(
+                    f"col_tipo '{val_tipo}' não reconhecido. "
+                    "Use: CAP/Despesa/Despesas (para despesa) ou CAR/Receita/Receitas (para receita)."
+                )
             else:
-                payload["col_tipo"] = val_tipo
+                payload["col_tipo"] = val_normalizado
 
         linhas_normalizadas.append(
             {
@@ -168,12 +192,25 @@ def _normalizar_linha_csv(linha: dict[str, str | None], colunas: list[str]) -> d
     return {coluna: (linha.get(coluna) or "").strip() for coluna in colunas}
 
 
+def _ler_membro_seguro(pacote: zipfile.ZipFile, nome: str) -> bytes:
+    """Lê um membro do XLSX limitando o tamanho descomprimido (anti zip-bomb).
+
+    Lê via stream até o teto + 1 byte; se ultrapassar, aborta sem materializar
+    o conteúdo inteiro em memória.
+    """
+    with pacote.open(nome) as fh:
+        dados = fh.read(_MAX_MEMBRO_DESCOMPRIMIDO + 1)
+    if len(dados) > _MAX_MEMBRO_DESCOMPRIMIDO:
+        raise DomainError("Arquivo XLSX excede o limite de descompressão permitido.")
+    return dados
+
+
 def _ler_xlsx(conteudo: bytes) -> ImportacaoArquivo:
     try:
         with zipfile.ZipFile(io.BytesIO(conteudo)) as pacote:
             shared_strings = _shared_strings_xlsx(pacote)
             sheet_path = _primeira_planilha_path(pacote)
-            xml_planilha = ElementTree.fromstring(pacote.read(sheet_path))
+            xml_planilha = ElementTree.fromstring(_ler_membro_seguro(pacote, sheet_path))
     except (KeyError, zipfile.BadZipFile, ElementTree.ParseError) as exc:
         raise DomainError("Arquivo XLSX inválido ou corrompido.") from exc
 
@@ -187,8 +224,9 @@ def _ler_xlsx(conteudo: bytes) -> ImportacaoArquivo:
     ]
     linhas = []
     for valores in linhas_xlsx[1:]:
+        # Linhas podem ter menos células que o cabeçalho (Excel omite células vazias no final)
         linha = {
-            cabecalho[indice]: _valor_texto(valores[indice]) or ""
+            cabecalho[indice]: (_valor_texto(valores[indice]) if indice < len(valores) else "") or ""
             for indice in range(len(cabecalho))
         }
         linhas.append(linha)
@@ -198,7 +236,7 @@ def _ler_xlsx(conteudo: bytes) -> ImportacaoArquivo:
 def _shared_strings_xlsx(pacote: zipfile.ZipFile) -> list[str]:
     if "xl/sharedStrings.xml" not in pacote.namelist():
         return []
-    raiz = ElementTree.fromstring(pacote.read("xl/sharedStrings.xml"))
+    raiz = ElementTree.fromstring(_ler_membro_seguro(pacote, "xl/sharedStrings.xml"))
     valores: list[str] = []
     for item in raiz.findall("a:si", _PLANILHA_NS):
         textos = [texto.text or "" for texto in item.findall(".//a:t", _PLANILHA_NS)]
@@ -207,8 +245,8 @@ def _shared_strings_xlsx(pacote: zipfile.ZipFile) -> list[str]:
 
 
 def _primeira_planilha_path(pacote: zipfile.ZipFile) -> str:
-    workbook = ElementTree.fromstring(pacote.read("xl/workbook.xml"))
-    rels = ElementTree.fromstring(pacote.read("xl/_rels/workbook.xml.rels"))
+    workbook = ElementTree.fromstring(_ler_membro_seguro(pacote, "xl/workbook.xml"))
+    rels = ElementTree.fromstring(_ler_membro_seguro(pacote, "xl/_rels/workbook.xml.rels"))
     relacionamentos = {
         rel.attrib["Id"]: rel.attrib["Target"]
         for rel in rels.findall("{http://schemas.openxmlformats.org/package/2006/relationships}Relationship")

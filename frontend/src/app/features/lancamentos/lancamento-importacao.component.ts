@@ -39,7 +39,7 @@ const CAMPOS: CampoOpcao[] = [
   { campo: 'valor', label: 'Valor', obrigatorio: true, ajuda: 'Aceita 1200,50 ou 1200.50. Negativos são convertidos.' },
   { campo: 'data_competencia', label: 'Data Competência', obrigatorio: true, ajuda: 'Aceita dd/mm/aaaa ou aaaa-mm-dd.' },
   { campo: 'data_vencimento', label: 'Data Vencimento', obrigatorio: true, ajuda: 'Aceita dd/mm/aaaa ou aaaa-mm-dd.' },
-  { campo: 'col_tipo', label: 'Tipo (CAP/CAR)', obrigatorio: false, ajuda: 'CAP = Despesa, CAR = Receita. Define o tipo por linha.' },
+  { campo: 'col_tipo', label: 'Tipo (Receita/Despesa)', obrigatorio: false, ajuda: 'CAP/Despesas/D = Despesa  |  CAR/Receitas/R = Receita. Define o tipo por linha.' },
   { campo: 'col_empresa', label: 'Empresa (Titular)', obrigatorio: false, ajuda: 'Nome da empresa cadastrada. Identifica a empresa por linha.' },
   { campo: 'categoria_nome', label: 'Categoria (nome)', obrigatorio: false, ajuda: 'Nome da categoria. Criada automaticamente se não existir.' },
   { campo: 'contato_nome', label: 'Fornecedor/Cliente (nome)', obrigatorio: false, ajuda: 'Nome do fornecedor ou cliente. Criado automaticamente se não existir.' },
@@ -60,7 +60,7 @@ const CAMPOS: CampoOpcao[] = [
       (visibleChange)="visivel.set($event)"
       [modal]="true"
       [style]="{ width: '980px', 'max-width': '96vw' }"
-      [draggable]="false"
+      [draggable]="true"
       [resizable]="false"
     >
       <div class="wrapper">
@@ -362,7 +362,7 @@ export class LancamentoImportacaoComponent {
       valor: ['valor', 'valor_total', 'vlr', 'amount'],
       data_competencia: ['data_competencia', 'competencia', 'data_comp', 'data_lancamento', 'emissao', 'emissão'],
       data_vencimento: ['data_vencimento', 'vencimento', 'data_vencto', 'vencto'],
-      col_tipo: ['cap/car', 'tipo', 'cap_car', 'natureza'],
+      col_tipo: ['cap/car', 'tipo', 'cap_car', 'natureza', 'receitas/despes', 'receitas/despesas', 'tipolancamento'],
       col_empresa: ['titular', 'empresa', 'cnpj_empresa', 'empresa_titular'],
       categoria_nome: ['categoria', 'categoria_nome', 'categoria nome', 'plano_contas'],
       contato_nome: ['fornecedor', 'cliente', 'contato', 'fornecedor_cliente', 'nome_fornecedor', 'favorecido'],

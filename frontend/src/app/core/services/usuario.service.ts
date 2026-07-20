@@ -9,6 +9,7 @@ export interface UsuarioCreate {
   nome: string;
   email: string;
   senha: string;
+  gestor?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -30,5 +31,9 @@ export class UsuarioService {
 
   reativar(id: string): Observable<UsuarioMe> {
     return this.http.patch<UsuarioMe>(`${this.base}/${id}/reativar`, {});
+  }
+
+  toggleGestor(id: string): Observable<UsuarioMe> {
+    return this.http.patch<UsuarioMe>(`${this.base}/${id}/gestor`, {});
   }
 }

@@ -23,7 +23,7 @@ A plataforma atende um cenário muito específico que dirige todas as decisões 
 - **Cadastros compartilhados**: Categorias, Clientes e Fornecedores podem ter escopo `global` (todas as empresas do usuário) ou `especifico` (uma única empresa). Default sugerido: global.
 - **Visualização multi-empresa simultânea** é uma preferência do usuário (default desligada). Quando ligada, o usuário escolhe a empresa no momento da inclusão de cada lançamento.
 - **Operações entre empresas em lançamentos**: duplicar (clonar na mesma ou em outra) e transferir (mover entre empresas).
-- **Conciliação bancária via OFX/CSV é requisito do MVP** (não fase posterior). Open Finance fica para fase 3.
+- **Conciliação bancária via OFX/CSV é requisito do MVP** (não fase posterior). **Open Finance está fora do escopo do projeto** (decisão firmada): exigiria participação regulada no Banco Central ou a contratação de um agregador pago (Pluggy/Belvo/etc.); a conciliação por OFX/CSV cobre a necessidade sem custo nem dependência externa.
 - **Modelo de permissões**: matriz `usuário × menu × ação`, sem perfis fixos. Novo usuário inicia **sem nenhum acesso**; admin libera explicitamente. Templates são evolução opcional.
 - **Apenas regime de caixa** no MVP. Regime de competência fica fora.
 - **Cartão de crédito** tem tratamento especial: compras alimentam fatura aberta, fatura fecha automaticamente, pagamento da fatura é o que gera saída de caixa real.

@@ -18,12 +18,12 @@ class FluxoCaixaService:
         usuario_id: uuid.UUID,
         data_inicio: date,
         data_fim: date,
-        empresa_id: uuid.UUID | None = None,
+        empresa_ids: list[uuid.UUID] | None = None,
         conta_bancaria_id: uuid.UUID | None = None,
     ) -> FluxoCaixaResponse:
-        saldo_inicial = await self._repo.saldo_conta(usuario_id, empresa_id, conta_bancaria_id)
+        saldo_inicial = await self._repo.saldo_conta(usuario_id, empresa_ids, conta_bancaria_id)
         rows = await self._repo.agregar_por_mes(
-            usuario_id, data_inicio, data_fim, empresa_id, conta_bancaria_id
+            usuario_id, data_inicio, data_fim, empresa_ids, conta_bancaria_id
         )
 
         acumulado: dict[date, dict] = {}
@@ -62,7 +62,7 @@ class FluxoCaixaService:
         ]
 
         return FluxoCaixaResponse(
-            empresa_id=empresa_id,
+            empresa_ids=empresa_ids or [],
             data_inicio=data_inicio,
             data_fim=data_fim,
             saldo_inicial=saldo_inicial,

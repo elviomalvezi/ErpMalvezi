@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -23,9 +23,13 @@ class Usuario(BaseModel):
     foto_url: Mapped[str | None] = mapped_column(String(500))
     ativo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    gestor: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, server_default="false")
     email_verificado: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     preferencia_multi_empresa: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     ultimo_login_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Incrementado para revogar todos os tokens do usuário (inativar, troca de senha).
+    # O token carrega o valor em `tv`; cada request compara com este.
+    token_version: Mapped[int] = mapped_column(Integer, default=0, nullable=False, server_default="0")
 
 
 class TokenSeguranca(BaseModel):

@@ -11,6 +11,7 @@ export interface UsuarioMe {
   email: string;
   ativo: boolean;
   admin: boolean;
+  gestor: boolean;
   email_verificado: boolean;
   preferencia_multi_empresa: boolean;
   foto_url: string | null;
@@ -19,7 +20,7 @@ export interface UsuarioMe {
 export interface EmpresaListItem {
   id: string;
   tipo: 'PJ' | 'PF';
-  documento: string;
+  documento: string | null;
   nome_principal: string;
   nome_alternativo: string | null;
   cor_primaria: string | null;
@@ -38,7 +39,7 @@ export interface Lancamento {
   data_competencia: string;
   data_vencimento: string;
   data_pagamento: string | null;
-  status: 'pendente' | 'pago' | 'cancelado';
+  status: 'pendente' | 'pago' | 'cancelado' | 'nao_realizado';
   categoria_id: string | null;
   contato_id: string | null;
   conta_bancaria_id: string | null;
@@ -48,7 +49,11 @@ export interface Lancamento {
   grupo_parcelas_id: string | null;
   recorrencia_id: string | null;
   observacoes: string | null;
+  tags: string[];
+  veiculo_id: string | null;
+  imovel_id: string | null;
   ativo: boolean;
+  tem_anexo: boolean;
 }
 
 export interface LancamentoCreate {
@@ -62,6 +67,9 @@ export interface LancamentoCreate {
   contato_id?: string | null;
   conta_bancaria_id?: string | null;
   observacoes?: string | null;
+  tags?: string[];
+  veiculo_id?: string | null;
+  imovel_id?: string | null;
 }
 
 export interface LancamentoParceladoCreate {
@@ -76,6 +84,9 @@ export interface LancamentoParceladoCreate {
   contato_id?: string | null;
   conta_bancaria_id?: string | null;
   observacoes?: string | null;
+  tags?: string[];
+  veiculo_id?: string | null;
+  imovel_id?: string | null;
 }
 
 export interface LancamentoRecorrenteCreate {
@@ -91,6 +102,9 @@ export interface LancamentoRecorrenteCreate {
   contato_id?: string | null;
   conta_bancaria_id?: string | null;
   observacoes?: string | null;
+  tags?: string[];
+  veiculo_id?: string | null;
+  imovel_id?: string | null;
 }
 
 export interface LancamentoBaixaCreate {
@@ -108,6 +122,9 @@ export interface LancamentoUpdate {
   categoria_id?: string | null;
   contato_id?: string | null;
   observacoes?: string | null;
+  tags?: string[];
+  veiculo_id?: string | null;
+  imovel_id?: string | null;
 }
 
 export interface Transferencia {
@@ -187,6 +204,8 @@ export interface Categoria {
   nivel: number;
   codigo: string | null;
   descricao: string | null;
+  exigir_veiculo: boolean;
+  exigir_imovel: boolean;
   ativa: boolean;
 }
 
@@ -198,6 +217,8 @@ export interface CategoriaCreate {
   empresa_id?: string | null;
   codigo?: string | null;
   descricao?: string | null;
+  exigir_veiculo?: boolean;
+  exigir_imovel?: boolean;
 }
 
 export interface CategoriaUpdate {
@@ -205,6 +226,8 @@ export interface CategoriaUpdate {
   parent_id?: string | null;
   codigo?: string | null;
   descricao?: string | null;
+  exigir_veiculo?: boolean | null;
+  exigir_imovel?: boolean | null;
 }
 
 export interface DashboardResponse {
@@ -223,6 +246,13 @@ export interface DashboardResponse {
   a_vencer_hoje: LancamentoPendente[];
   vencidos: LancamentoPendente[];
   proximos_vencimentos: LancamentoPendente[];
+  alertas_count: number;
+}
+
+export interface GraficosResponse {
+  despesas_por_categoria: { categoria: string; total: number }[];
+  evolucao_mensal: { mes: string; receitas: number; despesas: number }[];
+  alertas_count: number;
 }
 
 export interface LancamentoPendente {
@@ -262,6 +292,8 @@ export interface EmpresaCreate {
 }
 
 export interface EmpresaUpdate {
+  tipo?: TipoPessoa | null;
+  documento?: string | null;
   nome_principal?: string | null;
   nome_alternativo?: string | null;
   regime_tributario?: RegimeTributario | null;
@@ -294,7 +326,7 @@ export interface EmpresaUpdate {
 export interface EmpresaResponse {
   id: string;
   tipo: TipoPessoa;
-  documento: string;
+  documento: string | null;
   nome_principal: string;
   nome_alternativo: string | null;
   documento_complementar_1: string | null;
@@ -335,7 +367,7 @@ export interface Contato {
   usuario_id: string;
   empresa_id: string | null;
   tipo: 'PJ' | 'PF';
-  documento: string;
+  documento: string | null;
   nome_principal: string;
   nome_alternativo: string | null;
   eh_cliente: boolean;
@@ -436,10 +468,24 @@ export interface ImportacaoAnaliseResponse {
   campos_obrigatorios: string[];
 }
 
+export interface ExtratoItem {
+  lancamento: Lancamento;
+  saldo_apos: number;
+}
+
+export interface ExtratoResponse {
+  conta_bancaria_id: string;
+  data_inicio: string | null;
+  data_fim: string | null;
+  saldo_anterior: number;
+  saldo_final: number;
+  itens: ExtratoItem[];
+}
+
 export interface ImportacaoLinhaPreview {
   numero_linha: number;
   dados_originais: Record<string, string>;
-  payload: Record<string, string | number | null>;
+  payload: Record<string, any>;
   erros: string[];
   valida: boolean;
 }
@@ -455,6 +501,7 @@ export interface ImportacaoResultadoResponse {
   total_linhas: number;
   importadas: number;
   ignoradas: number;
+  empresas_criadas_importacao: string[];
 }
 
 // ─────────────────────────────────── Patrimônio ──────────────────────────────
@@ -611,17 +658,17 @@ export interface TransferenciaCreate {
 
 export interface PeriodoFluxo {
   periodo: string;
-  receitas_realizadas: number;
-  despesas_realizadas: number;
-  receitas_previstas: number;
-  despesas_previstas: number;
+  receitas_realizadas: string | number;
+  despesas_realizadas: string | number;
+  receitas_previstas: string | number;
+  despesas_previstas: string | number;
 }
 
 export interface FluxoCaixaResponse {
-  empresa_id: string | null;
+  empresa_ids: string[];
   data_inicio: string;
   data_fim: string;
-  saldo_inicial: number;
+  saldo_inicial: string | number;
   periodos: PeriodoFluxo[];
 }
 

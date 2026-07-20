@@ -45,8 +45,8 @@ class ConciliacaoService:
         conta = await self._conta_repo.get_by_id(conta_id)
         if conta is None:
             raise NotFoundError("Conta bancária não encontrada.")
-        if conta.usuario_id != usuario_id:
-            raise PermissionDeniedError("Sem permissão para esta conta bancária.")
+        if not await self._conta_repo.tem_acesso(conta_id, usuario_id):
+            raise PermissionDeniedError("Sem acesso a esta conta bancária.")
         if conta.tipo == TipoConta.CARTAO_CREDITO:
             raise DomainError("Não é possível importar extrato de cartão de crédito.")
         return conta
@@ -110,6 +110,9 @@ class ConciliacaoService:
         empresa_id: uuid.UUID,
         usuario_id: uuid.UUID,
     ) -> ImportacaoBancaria:
+        # A empresa é derivada da conta já validada (ignora o valor enviado pelo
+        # cliente), impedindo gravar a importação em empresa sem acesso.
+        empresa_id = conta.empresa_id
         importacao = ImportacaoBancaria(
             conta_bancaria_id=conta.id,
             empresa_id=empresa_id,
@@ -147,6 +150,7 @@ class ConciliacaoService:
             await self._repo.create_transacoes(transacoes)
 
         importacao.total_transacoes = len(transacoes)
+        await self._repo.commit()
         return importacao
 
     async def listar_importacoes(
@@ -165,7 +169,7 @@ class ConciliacaoService:
         importacao = await self._repo.get_importacao(importacao_id)
         if importacao is None:
             raise NotFoundError("Importação não encontrada.")
-        if importacao.usuario_id != usuario_id:
+        if not await self._repo.tem_acesso_empresa(importacao.empresa_id, usuario_id):
             raise PermissionDeniedError("Sem permissão para esta importação.")
         return await self._repo.listar_transacoes(importacao_id, status)
 
@@ -189,11 +193,14 @@ class ConciliacaoService:
         lancamento = await self._lancamento_repo.get_by_id(lancamento_id)
         if lancamento is None:
             raise NotFoundError("Lançamento não encontrado.")
-        if lancamento.usuario_id != usuario_id:
-            raise PermissionDeniedError("Sem permissão para este lançamento.")
+        if not await self._lancamento_repo.tem_acesso(lancamento_id, usuario_id):
+            raise PermissionDeniedError("Sem acesso a este lançamento.")
+        if lancamento.empresa_id != transacao.empresa_id:
+            raise DomainError("O lançamento deve pertencer à mesma empresa da transação.")
 
         transacao.status = StatusTransacao.CONCILIADA
         transacao.lancamento_id = lancamento_id
+        await self._repo.commit()
         return transacao
 
     async def criar_lancamento_de_transacao(
@@ -207,7 +214,8 @@ class ConciliacaoService:
             raise ConflictError("Transação já está conciliada ou ignorada.")
 
         lancamento = Lancamento(
-            empresa_id=data.empresa_id,
+            # empresa derivada da transação validada (não do payload do cliente).
+            empresa_id=transacao.empresa_id,
             usuario_id=usuario_id,
             tipo=data.tipo,
             descricao=data.descricao,
@@ -238,6 +246,7 @@ class ConciliacaoService:
                     contato_id=data.contato_id,
                 )
 
+        await self._repo.commit()
         return transacao
 
     async def ignorar(
@@ -247,6 +256,7 @@ class ConciliacaoService:
         if transacao.status != StatusTransacao.PENDENTE:
             raise ConflictError("Transação já está conciliada ou ignorada.")
         transacao.status = StatusTransacao.IGNORADA
+        await self._repo.commit()
         return transacao
 
     async def sugerir_categoria(
@@ -264,6 +274,6 @@ class ConciliacaoService:
         transacao = await self._repo.get_transacao(transacao_id)
         if transacao is None:
             raise NotFoundError("Transação não encontrada.")
-        if transacao.usuario_id != usuario_id:
+        if not await self._repo.tem_acesso_empresa(transacao.empresa_id, usuario_id):
             raise PermissionDeniedError("Sem permissão para esta transação.")
         return transacao

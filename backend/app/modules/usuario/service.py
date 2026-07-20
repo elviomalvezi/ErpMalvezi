@@ -69,7 +69,10 @@ class UsuarioService:
         usuario.ultimo_login_em = datetime.now(UTC)
         await self._repo.commit()
 
-        token = create_access_token(str(usuario.id), extra={"jti": jti, "nome": usuario.nome})
+        token = create_access_token(
+            str(usuario.id),
+            extra={"jti": jti, "nome": usuario.nome, "tv": usuario.token_version},
+        )
         logger.info("usuario_login", usuario_id=str(usuario.id), ip=ip)
         return token
 
@@ -89,6 +92,7 @@ class UsuarioService:
             nome=data.nome,
             email=data.email.lower(),
             senha_hash=hash_password(data.senha),
+            gestor=data.gestor,
         )
         await self._repo.create(usuario)
         await self._repo.commit()
@@ -125,6 +129,7 @@ class UsuarioService:
             raise AuthError("Senha atual incorreta.")
 
         usuario.senha_hash = hash_password(data.nova_senha)
+        usuario.token_version += 1  # invalida todos os tokens já emitidos
         await self._repo.revogar_todas_sessoes_usuario(usuario_id)
         await self._repo.commit()
         logger.info("senha_alterada", usuario_id=str(usuario_id))
@@ -180,6 +185,7 @@ class UsuarioService:
             raise NotFoundError("Usuário não encontrado.")
 
         usuario.senha_hash = hash_password(data.nova_senha)
+        usuario.token_version += 1  # invalida todos os tokens já emitidos
         token.usado_em = datetime.now(UTC)
         await self._repo.revogar_todas_sessoes_usuario(usuario.id)
         await self._repo.commit()
@@ -197,6 +203,8 @@ class UsuarioService:
         if not usuario.ativo:
             raise DomainError("Usuário já está inativo.")
         usuario.ativo = False
+        usuario.token_version += 1  # derruba a sessão do usuário imediatamente
+        await self._repo.revogar_todas_sessoes_usuario(usuario_id)
         await self._repo.commit()
         await self._repo.refresh(usuario)
         return usuario
@@ -210,4 +218,18 @@ class UsuarioService:
         usuario.ativo = True
         await self._repo.commit()
         await self._repo.refresh(usuario)
+        return usuario
+
+    async def toggle_gestor(self, usuario_id: uuid.UUID, admin_id: uuid.UUID) -> Usuario:
+        usuario = await self._repo.get_by_id(usuario_id)
+        if usuario is None:
+            raise NotFoundError("Usuário não encontrado.")
+        if usuario.admin:
+            raise DomainError("Administradores não podem ser rebaixados a gestor por esta operação.")
+        if usuario_id == admin_id:
+            raise DomainError("Você não pode alterar seu próprio perfil.")
+        usuario.gestor = not usuario.gestor
+        await self._repo.commit()
+        await self._repo.refresh(usuario)
+        logger.info("usuario_gestor_alterado", usuario_id=str(usuario_id), gestor=usuario.gestor)
         return usuario

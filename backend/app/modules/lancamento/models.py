@@ -3,7 +3,8 @@ import uuid
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Date, Enum, ForeignKey, Index, Integer, Numeric, SmallInteger, String, Text
+from sqlalchemy import Boolean, Date, Enum, ForeignKey, Index, Integer, LargeBinary, Numeric, SmallInteger, String, Text
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -19,6 +20,7 @@ class StatusLancamento(enum.StrEnum):
     PENDENTE = "pendente"
     PAGO = "pago"
     CANCELADO = "cancelado"
+    NAO_REALIZADO = "nao_realizado"
 
 
 class FrequenciaRecorrencia(enum.StrEnum):
@@ -37,6 +39,7 @@ class Lancamento(BaseModel):
         Index("ix_lancamento_contato", "contato_id"),
         Index("ix_lancamento_grupo", "grupo_parcelas_id"),
         Index("ix_lancamento_recorrencia", "recorrencia_id"),
+        Index("ix_lancamento_saldo", "conta_bancaria_id", "status", "data_vencimento"),
     )
 
     empresa_id: Mapped[uuid.UUID] = mapped_column(
@@ -83,6 +86,13 @@ class Lancamento(BaseModel):
     recorrencia_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
 
     observacoes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    tags: Mapped[list[str]] = mapped_column(ARRAY(String(50)), nullable=False, default=list, server_default="{}")
+    veiculo_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("veiculo.id", ondelete="SET NULL"), nullable=True
+    )
+    imovel_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("imovel.id", ondelete="SET NULL"), nullable=True
+    )
     ativo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
@@ -99,5 +109,8 @@ class LancamentoAnexo(BaseModel):
     nome_original: Mapped[str] = mapped_column(String(255), nullable=False)
     tamanho: Mapped[int] = mapped_column(Integer, nullable=False)
     mime_type: Mapped[str] = mapped_column(String(100), nullable=False)
-    caminho: Mapped[str] = mapped_column(String(500), nullable=False)
+    # Conteúdo do anexo armazenado no próprio banco (BYTEA) — garante persistência
+    # e backup consistente via pg_dump. `caminho` fica como legado/opcional.
+    conteudo: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    caminho: Mapped[str | None] = mapped_column(String(500), nullable=True)
     ativo: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)

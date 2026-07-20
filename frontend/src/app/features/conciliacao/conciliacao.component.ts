@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ConfirmationService, MessageService } from 'primeng/api';
@@ -42,6 +42,12 @@ import {
 <input #ofxInput type="file" hidden accept=".ofx" (change)="onArquivoChange($event, 'ofx')" />
 <input #csvInput type="file" hidden accept=".csv,.txt" (change)="onArquivoChange($event, 'csv')" />
 
+@if (!empresaAtiva()) {
+  <div class="sem-empresa">
+    <i class="pi pi-building sem-empresa-icon"></i>
+    <p>Selecione uma empresa no topo da tela para acessar a conciliação bancária.</p>
+  </div>
+} @else {
 <div class="page">
   <div class="page-header">
     <h1 class="page-title">Conciliação Bancária</h1>
@@ -175,7 +181,7 @@ import {
 
 <!-- Dialog: Conciliar com lançamento existente -->
 <p-dialog [(visible)]="dialogConciliar" header="Conciliar com Lançamento Existente"
-  [modal]="true" [style]="{width:'560px'}" [draggable]="false">
+  [modal]="true" [style]="{width:'560px'}" [draggable]="true">
   @if (transacaoAtiva()) {
     <div class="transacao-resumo">
       <span class="tr-label">Transação:</span>
@@ -227,12 +233,14 @@ import {
 
 <!-- Dialog: Criar Lançamento -->
 <p-dialog [(visible)]="dialogCriarLanc" header="Criar Lançamento a partir da Transação"
-  [modal]="true" [style]="{width:'500px'}" [draggable]="false">
+  [modal]="true" [style]="{width:'500px'}" [draggable]="true">
   <div class="form-grid">
     <div class="form-row-2col">
       <div class="form-row">
         <label>Tipo <span class="req">*</span></label>
-        <p-select [options]="tipoLancOpts" [(ngModel)]="criarForm.tipo"
+        <p-select [options]="tipoLancOpts"
+          [ngModel]="criarFormTipo()"
+          (ngModelChange)="criarFormTipo.set($event)"
           optionLabel="label" optionValue="value" />
       </div>
       <div class="form-row">
@@ -256,9 +264,12 @@ import {
       </div>
     </div>
     <div class="form-row">
-      <label>Categoria</label>
-      <p-select [options]="categoriasFiltradas()" optionLabel="nome" optionValue="id"
-        [(ngModel)]="criarForm.categoriaId" placeholder="Sem categoria" [showClear]="true" />
+      <label>Categoria <span class="req">*</span></label>
+      <p-select [options]="categoriaOpts()" optionLabel="label" optionValue="value"
+        [(ngModel)]="criarForm.categoriaId" placeholder="Selecione a categoria"
+        [filter]="true" filterPlaceholder="Buscar categoria..." appendTo="body"
+        [class.invalid-field]="submetido() && !criarForm.categoriaId"
+        class="cat-select" />
     </div>
     <div class="form-row">
       <label>Observações</label>
@@ -273,15 +284,18 @@ import {
       (onClick)="confirmarCriarLancamento()" />
   </ng-template>
 </p-dialog>
+} <!-- fecha @else -->
   `,
   styles: [`
+    .sem-empresa { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; color: var(--p-surface-400); text-align: center; }
+    .sem-empresa-icon { font-size: 3rem; margin-bottom: 1rem; }
     .page { padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; height: calc(100vh - 120px); }
     .page-header { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; flex-shrink: 0; }
     .page-title { margin: 0; font-size: 1.4rem; font-weight: 700; flex: 1; }
     .header-controls { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
     .conciliacao-layout { display: grid; grid-template-columns: 300px 1fr; gap: 1rem; flex: 1; min-height: 0; overflow: hidden; }
     .importacoes-panel { display: flex; flex-direction: column; gap: 0.5rem; border: 1px solid var(--p-surface-200); border-radius: 8px; padding: 0.75rem; overflow-y: auto; }
-    .transacoes-panel { display: flex; flex-direction: column; gap: 0.75rem; min-height: 0; overflow: hidden; }
+    .transacoes-panel { display: flex; flex-direction: column; gap: 0.75rem; min-height: 0; overflow-y: auto; }
     .panel-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
     .panel-title { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--p-surface-500); }
     .empty-panel, .empty-transacoes { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; padding: 2rem 1rem; text-align: center; color: var(--p-surface-400); font-size: 0.875rem; height: 100%; }
@@ -323,12 +337,15 @@ import {
     label { font-size: 0.85rem; font-weight: 500; color: var(--p-surface-600); }
     .req { color: var(--p-red-500); }
     :host ::ng-deep .full-width, input.full-width, textarea.full-width { width: 100%; }
+    :host ::ng-deep p-select.cat-select, :host ::ng-deep p-select.cat-select .p-select { width: 100%; }
+    :host ::ng-deep p-select.invalid-field .p-select { border-color: var(--p-red-500) !important; }
     input[type="date"] { height: 2.25rem; padding: 0 0.75rem; border: 1px solid var(--p-surface-300);
       border-radius: 6px; font-size: 0.875rem; color: var(--p-surface-700); background: var(--p-surface-0); }
   `],
 })
 export class ConciliacaoComponent implements OnInit {
   protected readonly empresaStore = inject(EmpresaStore);
+  protected readonly empresaAtiva = computed(() => this.empresaStore.empresaAtiva());
   private readonly contaSvc = inject(ContaBancariaService);
   private readonly concilSvc = inject(ConciliacaoService);
   private readonly catSvc = inject(CategoriaService);
@@ -347,19 +364,22 @@ export class ConciliacaoComponent implements OnInit {
   protected readonly carregandoSugestoes = signal(false);
   protected readonly importando = signal(false);
   protected readonly salvandoLanc = signal(false);
+  protected readonly submetido = signal(false);
 
   protected filtroContaId: string | null = null;
   protected readonly filtroStatusTrans = signal('');
   protected dialogConciliar = false;
   protected dialogCriarLanc = false;
 
+  // tipo como Signal para que categoriaOpts seja reativo
+  protected readonly criarFormTipo = signal<'RECEITA' | 'DESPESA'>('DESPESA');
+
   protected criarForm = {
     empresaId: '',
     descricao: '',
-    tipo: '' as 'RECEITA' | 'DESPESA',
     dataCompetencia: '',
     dataVencimento: '',
-    categoriaId: '' as string | null,
+    categoriaId: null as string | null,
     observacoes: '',
   };
 
@@ -374,8 +394,13 @@ export class ConciliacaoComponent implements OnInit {
     return list.filter(t => t.status === filtro);
   });
 
-  protected readonly categoriasFiltradas = computed(() =>
-    this.categorias().filter(c => c.tipo === this.criarForm.tipo || !this.criarForm.tipo)
+  protected readonly categoriaOpts = computed(() =>
+    this.categorias()
+      .filter(c => c.ativa && c.tipo === this.criarFormTipo())
+      .map(c => ({
+        label: (c.nivel > 1 ? '  '.repeat(c.nivel - 1) + '↳ ' : '') + c.nome,
+        value: c.id,
+      }))
   );
 
   protected readonly statusTransOpts = [
@@ -390,8 +415,18 @@ export class ConciliacaoComponent implements OnInit {
     { label: 'Despesa', value: 'DESPESA' },
   ];
 
+  constructor() {
+    // Recarrega contas da empresa ativa sempre que ela mudar
+    effect(() => {
+      const empresa = this.empresaAtiva();
+      this.filtroContaId = null;
+      this.importacoes.set([]);
+      this.transacoes.set([]);
+      this.contaSvc.listar({ empresaId: empresa?.id }).subscribe(c => this.contas.set(c));
+    });
+  }
+
   ngOnInit(): void {
-    this.contaSvc.listar().subscribe(c => this.contas.set(c));
     this.catSvc.listar().subscribe(c => this.categorias.set(c));
   }
 
@@ -487,10 +522,11 @@ export class ConciliacaoComponent implements OnInit {
 
   protected abrirCriarLancamento(t: TransacaoBancariaResponse): void {
     this.transacaoAtiva.set(t);
+    this.submetido.set(false);
+    this.criarFormTipo.set(t.tipo === 'credito' ? 'RECEITA' : 'DESPESA');
     this.criarForm = {
       empresaId: t.empresa_id,
       descricao: t.descricao_original,
-      tipo: t.tipo === 'credito' ? 'RECEITA' : 'DESPESA',
       dataCompetencia: t.data,
       dataVencimento: t.data,
       categoriaId: null,
@@ -501,17 +537,18 @@ export class ConciliacaoComponent implements OnInit {
 
   protected confirmarCriarLancamento(): void {
     const t = this.transacaoAtiva();
-    if (!t || !this.criarForm.descricao || !this.criarForm.dataCompetencia || !this.criarForm.dataVencimento) {
-      this.msgSvc.add({ severity: 'warn', summary: 'Atenção', detail: 'Preencha os campos obrigatórios.' });
+    this.submetido.set(true);
+    if (!t || !this.criarForm.descricao || !this.criarForm.dataCompetencia || !this.criarForm.dataVencimento || !this.criarForm.categoriaId) {
+      this.msgSvc.add({ severity: 'warn', summary: 'Atenção', detail: 'Preencha todos os campos obrigatórios, incluindo a categoria.' });
       return;
     }
     const payload: CriarLancamentoConciliacaoRequest = {
       empresa_id: this.criarForm.empresaId,
       descricao: this.criarForm.descricao,
-      tipo: this.criarForm.tipo,
+      tipo: this.criarFormTipo(),
       data_competencia: this.criarForm.dataCompetencia,
       data_vencimento: this.criarForm.dataVencimento,
-      categoria_id: this.criarForm.categoriaId || null,
+      categoria_id: this.criarForm.categoriaId,
       observacoes: this.criarForm.observacoes || null,
     };
     this.salvandoLanc.set(true);

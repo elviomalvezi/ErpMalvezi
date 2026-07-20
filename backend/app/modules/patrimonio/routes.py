@@ -11,7 +11,7 @@ from app.core.deps import CurrentUserId
 from app.core.exceptions import DomainError, NotFoundError, PermissionDeniedError
 from app.core.storage import StorageProvider, get_storage_provider
 from app.core.utils import new_uuid
-from app.modules.patrimonio.models import ImovelAnexo, StatusImovel, StatusVeiculo, VeiculoAnexo
+from app.modules.patrimonio.models import ImovelAnexo, ImovelMatricula, StatusImovel, StatusVeiculo, VeiculoAnexo
 from app.modules.patrimonio.repository import ImovelRepository, VeiculoRepository
 from app.modules.patrimonio.schemas import (
     ImovelCreate,
@@ -240,14 +240,56 @@ async def reativar_imovel(
     return ImovelResponse.model_validate(i)
 
 
+# ── Lançamentos vinculados ao patrimônio ──────────────────────────────────────
+
+@router.get("/veiculos/{veiculo_id}/lancamentos")
+async def listar_lancamentos_veiculo(
+    veiculo_id: uuid.UUID,
+    usuario_id: CurrentUserId,
+    db: DbDep,
+) -> list[dict]:
+    from app.modules.lancamento.models import Lancamento as LancamentoModel
+    from app.modules.lancamento.schemas import LancamentoResponse
+
+    await _get_veiculo_ou_404(veiculo_id, usuario_id, db)
+    result = await db.execute(
+        select(LancamentoModel)
+        .where(LancamentoModel.veiculo_id == veiculo_id, LancamentoModel.ativo.is_(True))
+        .order_by(LancamentoModel.data_vencimento.desc())
+    )
+    lancamentos = result.scalars().all()
+    return [LancamentoResponse.model_validate(lct).model_dump(mode="json") for lct in lancamentos]
+
+
+@router.get("/imoveis/{imovel_id}/lancamentos")
+async def listar_lancamentos_imovel(
+    imovel_id: uuid.UUID,
+    usuario_id: CurrentUserId,
+    db: DbDep,
+) -> list[dict]:
+    from app.modules.lancamento.models import Lancamento as LancamentoModel
+    from app.modules.lancamento.schemas import LancamentoResponse
+
+    await _get_imovel_ou_404(imovel_id, usuario_id, db)
+    result = await db.execute(
+        select(LancamentoModel)
+        .where(LancamentoModel.imovel_id == imovel_id, LancamentoModel.ativo.is_(True))
+        .order_by(LancamentoModel.data_vencimento.desc())
+    )
+    lancamentos = result.scalars().all()
+    return [LancamentoResponse.model_validate(lct).model_dump(mode="json") for lct in lancamentos]
+
+
 # ── Anexos de Veículo ─────────────────────────────────────────────────────────
 
 async def _get_veiculo_ou_404(veiculo_id: uuid.UUID, usuario_id: uuid.UUID, db: AsyncSession) -> None:
+    from app.modules.empresa.models import UsuarioEmpresa
     from app.modules.patrimonio.models import Veiculo as VeiculoModel
+    sq = select(UsuarioEmpresa.empresa_id).where(UsuarioEmpresa.usuario_id == usuario_id)
     result = await db.execute(
-        select(VeiculoModel).where(
+        select(VeiculoModel.id).where(
             VeiculoModel.id == veiculo_id,
-            VeiculoModel.usuario_id == usuario_id,
+            VeiculoModel.empresa_id.in_(sq),
             VeiculoModel.ativo.is_(True),
         )
     )
@@ -337,11 +379,13 @@ async def download_anexo_veiculo(
 # ── Anexos de Imóvel ──────────────────────────────────────────────────────────
 
 async def _get_imovel_ou_404(imovel_id: uuid.UUID, usuario_id: uuid.UUID, db: AsyncSession) -> None:
+    from app.modules.empresa.models import UsuarioEmpresa
     from app.modules.patrimonio.models import Imovel as ImovelModel
+    sq = select(UsuarioEmpresa.empresa_id).where(UsuarioEmpresa.usuario_id == usuario_id)
     result = await db.execute(
-        select(ImovelModel).where(
+        select(ImovelModel.id).where(
             ImovelModel.id == imovel_id,
-            ImovelModel.usuario_id == usuario_id,
+            ImovelModel.empresa_id.in_(sq),
             ImovelModel.ativo.is_(True),
         )
     )
@@ -426,3 +470,86 @@ async def download_anexo_imovel(
         raise HTTPException(status_code=404, detail="Arquivo não encontrado no storage.")
     return Response(content=conteudo, media_type=anexo.mime_type,
                     headers={"Content-Disposition": f'attachment; filename="{anexo.nome_original}"'})
+
+# ── Matrículas de Imóvel ──────────────────────────────────────────────────────
+
+from pydantic import BaseModel as _BM  # noqa: E402
+
+
+class MatriculaCreate(_BM):
+    numero: str
+    descricao: str | None = None
+    principal: bool = False
+
+
+class MatriculaResponse(_BM):
+    model_config = {"from_attributes": True}
+    id: uuid.UUID
+    numero: str
+    descricao: str | None
+    principal: bool
+
+
+@router.get("/imoveis/{imovel_id}/matriculas", response_model=list[MatriculaResponse])
+async def listar_matriculas(
+    imovel_id: uuid.UUID, usuario_id: CurrentUserId, db: DbDep,
+) -> list[MatriculaResponse]:
+    await _get_imovel_ou_404(imovel_id, usuario_id, db)
+    result = await db.execute(
+        select(ImovelMatricula)
+        .where(ImovelMatricula.imovel_id == imovel_id)
+        .order_by(ImovelMatricula.principal.desc())
+    )
+    return [MatriculaResponse.model_validate(m) for m in result.scalars()]
+
+
+@router.post("/imoveis/{imovel_id}/matriculas", response_model=MatriculaResponse, status_code=201)
+async def adicionar_matricula(
+    imovel_id: uuid.UUID, data: MatriculaCreate,
+    usuario_id: CurrentUserId, db: DbDep,
+) -> MatriculaResponse:
+    await _get_imovel_ou_404(imovel_id, usuario_id, db)
+    if data.principal:
+        res = await db.execute(select(ImovelMatricula).where(ImovelMatricula.imovel_id == imovel_id, ImovelMatricula.principal.is_(True)))
+        for m in res.scalars():
+            m.principal = False
+    nova = ImovelMatricula(id=new_uuid(), imovel_id=imovel_id, numero=data.numero, descricao=data.descricao, principal=data.principal)
+    db.add(nova)
+    await db.commit()
+    await db.refresh(nova)
+    return MatriculaResponse.model_validate(nova)
+
+
+@router.patch("/imoveis/{imovel_id}/matriculas/{matricula_id}/principal", response_model=MatriculaResponse)
+async def definir_principal(
+    imovel_id: uuid.UUID, matricula_id: uuid.UUID,
+    usuario_id: CurrentUserId, db: DbDep,
+) -> MatriculaResponse:
+    await _get_imovel_ou_404(imovel_id, usuario_id, db)
+    res = await db.execute(select(ImovelMatricula).where(ImovelMatricula.imovel_id == imovel_id, ImovelMatricula.principal.is_(True)))
+    for m in res.scalars():
+        m.principal = False
+    res2 = await db.execute(select(ImovelMatricula).where(ImovelMatricula.id == matricula_id, ImovelMatricula.imovel_id == imovel_id))
+    mat = res2.scalar_one_or_none()
+    if mat is None:
+        raise HTTPException(status_code=404, detail="Matrícula não encontrada.")
+    mat.principal = True
+    await db.commit()
+    await db.refresh(mat)
+    return MatriculaResponse.model_validate(mat)
+
+
+@router.delete("/imoveis/{imovel_id}/matriculas/{matricula_id}", status_code=204)
+async def remover_matricula(
+    imovel_id: uuid.UUID, matricula_id: uuid.UUID,
+    usuario_id: CurrentUserId, db: DbDep,
+) -> None:
+    await _get_imovel_ou_404(imovel_id, usuario_id, db)
+    res = await db.execute(select(ImovelMatricula).where(ImovelMatricula.id == matricula_id, ImovelMatricula.imovel_id == imovel_id))
+    mat = res.scalar_one_or_none()
+    if mat is None:
+        raise HTTPException(status_code=404, detail="Matrícula não encontrada.")
+    if mat.principal:
+        raise HTTPException(status_code=400, detail="Defina outra matrícula como principal antes de remover esta.")
+    await db.delete(mat)
+    await db.commit()

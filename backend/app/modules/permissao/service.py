@@ -71,6 +71,7 @@ class PermissaoService:
                 concedido_por=str(concedido_por),
             )
 
+        await self._repo.commit()
         return await self._repo.listar_permissoes_usuario(usuario_id)
 
     async def revogar_permissao(
@@ -81,6 +82,7 @@ class PermissaoService:
             raise NotFoundError("Permissão não encontrada.")
 
         await self._repo.revogar(permissao)
+        await self._repo.commit()
         logger.info(
             "permissao_revogada",
             permissao_id=str(permissao_id),
@@ -115,6 +117,7 @@ class PermissaoService:
             )
             await self._repo.conceder(permissao)
 
+        await self._repo.commit()
         logger.info(
             "permissoes_substituidas",
             usuario_id=str(usuario_id),

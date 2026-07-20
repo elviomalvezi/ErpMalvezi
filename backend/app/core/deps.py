@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.auditoria import set_usuario_auditoria
 from app.core.database import get_db
 from app.core.security import decode_access_token
 
@@ -32,8 +33,36 @@ async def get_current_token_payload(
 
 async def get_current_user_id(
     payload: Annotated[dict[str, Any], Depends(get_current_token_payload)],
+    db: DbDep,
 ) -> uuid.UUID:
-    return uuid.UUID(payload["sub"])
+    from sqlalchemy import select
+
+    from app.modules.usuario.models import Usuario
+
+    usuario_id = uuid.UUID(payload["sub"])
+
+    # Revogação de token: confere se o usuário está ativo e se a versão do token
+    # bate com a atual. Inativar usuário ou trocar senha incrementa token_version,
+    # invalidando na hora todos os tokens já emitidos.
+    row = (
+        await db.execute(
+            select(Usuario.ativo, Usuario.token_version).where(Usuario.id == usuario_id)
+        )
+    ).one_or_none()
+    if row is None or not row.ativo:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Sessão inválida ou usuário inativo.",
+        )
+    if int(payload.get("tv", -1)) != int(row.token_version):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Sessão encerrada. Faça login novamente.",
+        )
+
+    # Marca o usuário da requisição para a auditoria automática (before_flush).
+    set_usuario_auditoria(usuario_id)
+    return usuario_id
 
 
 async def get_current_jti(
@@ -51,7 +80,6 @@ async def _get_admin_user_id(
     db: DbDep,
 ) -> uuid.UUID:
     from sqlalchemy import select
-
     from app.modules.usuario.models import Usuario
 
     result = await db.execute(select(Usuario.admin).where(Usuario.id == usuario_id))
@@ -63,7 +91,27 @@ async def _get_admin_user_id(
     return usuario_id
 
 
+async def _get_admin_or_gestor_id(
+    usuario_id: CurrentUserId,
+    db: DbDep,
+) -> uuid.UUID:
+    from sqlalchemy import select
+    from app.modules.usuario.models import Usuario
+
+    result = await db.execute(
+        select(Usuario.admin, Usuario.gestor).where(Usuario.id == usuario_id)
+    )
+    row = result.one_or_none()
+    if row is None or (not row.admin and not row.gestor):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso restrito a administradores e gestores.",
+        )
+    return usuario_id
+
+
 RequireAdmin = Annotated[uuid.UUID, Depends(_get_admin_user_id)]
+RequireAdminOrGestor = Annotated[uuid.UUID, Depends(_get_admin_or_gestor_id)]
 
 
 def require_permissao(menu_chave: str, acao_chave: str) -> Any:

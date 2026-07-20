@@ -7,6 +7,7 @@ import {
   Imovel,
   ImovelCreate,
   ImovelUpdate,
+  Lancamento,
   PatrimonioAnexo,
   Veiculo,
   VeiculoCreate,
@@ -114,5 +115,15 @@ export class PatrimonioService {
 
   downloadUrlImovel(imovelId: string, anexoId: string): string {
     return `${this.base}/imoveis/${imovelId}/anexos/${anexoId}/download`;
+  }
+
+  // ── Lançamentos vinculados ─────────────────────────────────────────────────
+
+  listarLancamentosVeiculo(veiculoId: string): Observable<Lancamento[]> {
+    return this.http.get<Lancamento[]>(`${this.base}/veiculos/${veiculoId}/lancamentos`);
+  }
+
+  listarLancamentosImovel(imovelId: string): Observable<Lancamento[]> {
+    return this.http.get<Lancamento[]>(`${this.base}/imoveis/${imovelId}/lancamentos`);
   }
 }

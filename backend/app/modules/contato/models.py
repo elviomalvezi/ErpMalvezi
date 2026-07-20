@@ -21,7 +21,11 @@ class EscopoContato(enum.StrEnum):
 class Contato(BaseModel):
     __tablename__ = "contato"
     __table_args__ = (
-        UniqueConstraint("usuario_id", "documento", name="uq_contato_usuario_documento"),
+        # Por empresa: o mesmo CNPJ pode existir em empresas diferentes (cada uma
+        # com seu cadastro), mas não duplicado dentro da mesma empresa.
+        UniqueConstraint(
+            "usuario_id", "empresa_id", "documento", name="uq_contato_usuario_empresa_documento"
+        ),
     )
 
     usuario_id: Mapped[uuid.UUID] = mapped_column(

@@ -23,15 +23,24 @@ import { SidebarComponent } from '../sidebar/sidebar.component';
       display: flex;
       flex-direction: column;
       min-height: 100vh;
+      background: var(--p-surface-100);
     }
     .layout-body {
       display: flex;
       flex: 1;
+      background: var(--p-surface-100);
+      align-items: stretch;
+    }
+    :host ::ng-deep app-sidebar {
+      display: flex;
+      flex-direction: column;
     }
     .layout-content {
       flex: 1;
       padding: 1.5rem;
       overflow-y: auto;
+      background: var(--p-surface-100);
+      min-height: 0;
     }
   `],
 })
