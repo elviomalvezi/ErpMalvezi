@@ -38,7 +38,7 @@ class NotificacaoService:
             try:
                 smtp_sender.send(
                     to=usuario.email,
-                    subject=f"App Financeiro — {len(vencidos)} vencido(s), {len(proximos)} a vencer",
+                    subject=f"ERP Malvezi — {len(vencidos)} vencido(s), {len(proximos)} a vencer",
                     html=html,
                 )
                 enviados += 1
@@ -246,7 +246,7 @@ def _render_email(
     <head><meta charset="utf-8"/></head>
     <body style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto;padding:20px;color:#1e293b">
       <div style="border-left:4px solid #6366f1;padding-left:16px;margin-bottom:20px">
-        <h2 style="margin:0;color:#6366f1">App Financeiro</h2>
+        <h2 style="margin:0;color:#6366f1">ERP Malvezi</h2>
         <p style="margin:4px 0 0;color:#64748b;font-size:13px">
           Resumo de vencimentos — {hoje.strftime("%d/%m/%Y")}
         </p>
@@ -260,7 +260,7 @@ def _render_email(
       {secao_certs}
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0"/>
       <p style="font-size:12px;color:#94a3b8">
-        Este e-mail foi gerado automaticamente pelo App Financeiro.
+        Este e-mail foi gerado automaticamente pelo ERP Malvezi.
         Acesse o sistema para gerenciar seus lançamentos.
       </p>
     </body>

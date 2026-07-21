@@ -1,4 +1,4 @@
-1# App Financeiro
+1# ERP Malvezi
 
 Plataforma web de controle financeiro inspirada no Conta Azul. Documento principal de referência: `App_Financeiro_Especificacao_MVP.docx` na raiz deste diretório.
 
@@ -106,7 +106,7 @@ Para que a aplicação rode igual em dev local, VM interna e (eventualmente) AWS
 Monorepo simples com frontend e backend separados:
 
 ```
-App Financeiro/
+ERP Malvezi/
 ├── CLAUDE.md
 ├── App_Financeiro_Especificacao_MVP.docx
 ├── docker-compose.yml          # Postgres, MinIO, Mailhog

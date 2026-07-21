@@ -16,7 +16,7 @@ import { TabsModule } from 'primeng/tabs';
         <i class="pi pi-question-circle header-icon"></i>
         <div>
           <h1>Central de Ajuda</h1>
-          <p>Guia completo de uso do App Financeiro — versão 1.1 (atualizado em junho/2026)</p>
+          <p>Guia completo de uso do ERP Malvezi — versão 1.1 (atualizado em junho/2026)</p>
         </div>
       </div>
 

@@ -1,4 +1,4 @@
-# Modelo de Dados — App Financeiro MVP
+# Modelo de Dados — ERP Malvezi MVP
 
 Diagrama ER e referência completa de todas as tabelas dos 14 módulos.
 

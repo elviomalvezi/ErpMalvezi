@@ -161,7 +161,7 @@ class UsuarioService:
             "<p>Se não foi você, ignore este e-mail.</p>"
         )
         try:
-            smtp_sender.send(usuario.email, "Redefinição de senha — App Financeiro", html)
+            smtp_sender.send(usuario.email, "Redefinição de senha — ERP Malvezi", html)
         except Exception:
             logger.exception("erro_envio_email_recuperacao_senha", email=email)
 

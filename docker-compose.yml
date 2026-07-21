@@ -1,7 +1,7 @@
 services:
   postgres:
     image: postgres:16
-    container_name: appfinanceiro_postgres
+    container_name: erpmalvezi_postgres
     restart: unless-stopped
     env_file: .env
     environment:
@@ -21,7 +21,7 @@ services:
 
   minio:
     image: minio/minio:latest
-    container_name: appfinanceiro_minio
+    container_name: erpmalvezi_minio
     restart: unless-stopped
     env_file: .env
     environment:
@@ -42,7 +42,7 @@ services:
 
   mailhog:
     image: mailhog/mailhog:latest
-    container_name: appfinanceiro_mailhog
+    container_name: erpmalvezi_mailhog
     restart: unless-stopped
     ports:
       - "1025:1025"

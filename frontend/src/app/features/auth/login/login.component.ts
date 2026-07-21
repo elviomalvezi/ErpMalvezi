@@ -38,7 +38,7 @@ function toEmpresa(e: { id: string; nome_principal: string; nome_alternativo?: s
       <p-card styleClass="login-card">
         <div class="login-brand">
           <span class="brand-icon pi pi-wallet"></span>
-          <h1>App Financeiro</h1>
+          <h1>ERP Malvezi</h1>
           @if (etapa() === 'credenciais') {
             <p>Entre com suas credenciais para acessar o sistema.</p>
           } @else {

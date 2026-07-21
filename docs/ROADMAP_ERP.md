@@ -1,6 +1,6 @@
-# Roadmap ERP — De App Financeiro a ERP completo para PMEs
+# Roadmap ERP — De ERP Malvezi a ERP completo para PMEs
 
-Este documento define a evolução do App Financeiro para um **ERP modular para pequenas e médias empresas**, mantendo o que já existe como primeiro domínio pronto (Financeiro) e estruturando os demais domínios em cima da mesma plataforma.
+Este documento define a evolução do ERP Malvezi para um **ERP modular para pequenas e médias empresas**, mantendo o que já existe como primeiro domínio pronto (Financeiro) e estruturando os demais domínios em cima da mesma plataforma.
 
 ## Princípios
 

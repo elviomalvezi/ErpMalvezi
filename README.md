@@ -1,4 +1,4 @@
-# App Financeiro — Ambiente Local
+# ERP Malvezi — Ambiente Local
 
 ## Pré-requisitos
 

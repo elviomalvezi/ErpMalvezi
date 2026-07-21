@@ -1,11 +1,11 @@
 #!/bin/sh
-# Backup diário do PostgreSQL do App Financeiro, com rotação.
+# Backup diário do PostgreSQL do ERP Malvezi, com rotação.
 # Roda na VM de produção via cron. O pg_dump é executado dentro do container
 # pelo socket local (sem senha em arquivo). Com os anexos agora no banco (BYTEA),
 # este dump cobre TODO o estado da aplicação.
 set -eu
 
-BACKUP_DIR=/opt/appfinanceiro/backups
+BACKUP_DIR=/opt/erpmalvezi/backups
 CONTAINER=appfin_postgres
 DB_USER=app_financeiro_user
 DB_NAME=app_financeiro

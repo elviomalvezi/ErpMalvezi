@@ -64,7 +64,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(
-    title="App Financeiro",
+    title="ERP Malvezi",
     description="Plataforma web de controle financeiro",
     version="0.1.0",
     lifespan=lifespan,

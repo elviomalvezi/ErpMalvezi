@@ -65,7 +65,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      # Certificado wildcard *.gtexbrasil.ind.br (fora do repo, na VM).
+      # Certificado TLS do dominio do ErpMalvezi (fora do repo, na VM).
       - ./certs:/etc/nginx/certs:ro
     depends_on:
       - backend

@@ -37,7 +37,7 @@ import type { Lancamento } from '../../../core/models';
 
     <header class="app-header">
       <div class="header-brand">
-        <span class="brand-name">App Financeiro</span>
+        <span class="brand-name">ERP Malvezi</span>
       </div>
 
       <div class="header-busca" #buscaContainer>

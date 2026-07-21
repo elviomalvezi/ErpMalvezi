@@ -1,4 +1,4 @@
-# App Financeiro — Catálogo de Funcionalidades
+# ERP Malvezi — Catálogo de Funcionalidades
 
 > Plataforma web de controle financeiro multi-empresa, inspirada no Conta Azul.
 > Documento de referência funcional · Atualizado em junho/2026.
@@ -7,7 +7,7 @@
 
 ## Visão geral
 
-O **App Financeiro** centraliza a gestão financeira de **várias empresas** (Pessoa Jurídica e Pessoa Física) operadas por um mesmo grupo, com a rotina concentrada em uma operação central (secretária). O foco é **eficiência operacional**: importação automatizada, ações em lote entre empresas e visão consolidada — tudo em português (PT-BR).
+O **ERP Malvezi** centraliza a gestão financeira de **várias empresas** (Pessoa Jurídica e Pessoa Física) operadas por um mesmo grupo, com a rotina concentrada em uma operação central (secretária). O foco é **eficiência operacional**: importação automatizada, ações em lote entre empresas e visão consolidada — tudo em português (PT-BR).
 
 - **Multi-empresa de um único dono** (não é SaaS multi-tenant tradicional).
 - **Regime de caixa** (data de pagamento/recebimento define a competência).

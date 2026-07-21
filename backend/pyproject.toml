@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "app-financeiro"
+name = "erp-malvezi"
 version = "0.1.0"
 description = "Plataforma web de controle financeiro"
 requires-python = ">=3.12"

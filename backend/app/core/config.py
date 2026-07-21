@@ -3,7 +3,7 @@ from pathlib import Path
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Raiz do projeto (AppFinanceiro/) independente do CWD
+# Raiz do projeto (ErpMalvezi/) independente do CWD
 _PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 
 # Valores de placeholder dos arquivos .env*.example — nunca podem chegar a produção.
@@ -31,13 +31,13 @@ class Settings(BaseSettings):
     storage_endpoint: str = "http://localhost:9000"
     storage_access_key: str = "minioadmin"
     storage_secret_key: str = "minioadmin123"
-    storage_bucket: str = "appfinanceiro"
+    storage_bucket: str = "erpmalvezi"
 
     smtp_host: str = "localhost"
     smtp_port: int = 1025
     smtp_user: str = ""
     smtp_password: str = ""
-    smtp_from: str = "noreply@appfinanceiro.local"
+    smtp_from: str = "noreply@erpmalvezi.local"
 
     @field_validator("database_url")
     @classmethod
