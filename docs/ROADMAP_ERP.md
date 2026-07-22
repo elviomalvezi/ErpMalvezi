@@ -15,17 +15,17 @@ Este documento define a evolução do ERP Malvezi para um **ERP modular para peq
 |---|---------|--------|---------|
 | 0 | **Plataforma** | ✅ existente | multi-empresa, usuários/auth, permissões, auditoria, notificações, busca, certificado digital, configurações |
 | 1 | **Financeiro** | ✅ existente | lançamentos, contas bancárias, cartão/fatura, transferências, conciliação OFX/CSV, fluxo de caixa, inadimplência, extrato, DRE/relatórios, patrimonial, importação. **Evolução planejada — integração bancária**: cobrança registrada (boleto + Pix) e pagamento eletrônico via **CNAB 240 remessa/retorno** com baixa automática; adapter `CobrancaProvider` preparado para API bancária/agregador (PlugBoleto, Kobana) com webhook de liquidação como evolução. **Integração Banco Cora (opcional)**: implementação `CoraCobranca` via API oficial (developers.cora.com.br) — boleto registrado com Pix híbrido, multa/juros/descontos, webhook de liquidação p/ baixa em tempo real; requer plano CoraPro; demanda de cliente em prospecção (jul/2026) |
-| 2 | **Cadastros (dados mestres)** | 🔶 parcial | contatos (existe); produtos e serviços (já com campos tributários da reforma: CST-IBS/CBS, cClassTrib), **produtos × fornecedores** (de-para p/ importação de XML e cotações), unidades de medida, tabelas de preço, transportadoras, **centros de custo** (a fazer) |
-| 3 | **Estoque** | ⬜ a fazer | depósitos, movimentações, inventário, custo médio, alertas de estoque mínimo |
+| 2 | **Cadastros (dados mestres)** | 🔶 parcial | contatos (existe); produtos e serviços (já com campos tributários da reforma: CST-IBS/CBS, cClassTrib), **produtos × fornecedores** (de-para p/ importação de XML e cotações), unidades de medida, tabelas de preço, transportadoras, **centros de custo** (a fazer); **integração SPC para análise de crédito** (adapter `CreditoProvider`; análise aritmética, sem decisão automatizada; acessível do cadastro e do pedido de venda — demanda Pavani) |
+| 3 | **Estoque** | ⬜ a fazer | depósitos, movimentações, inventário, custo médio, alertas de estoque mínimo; **armazém virtual de locação/manutenção** (depósitos lógicos com transferência automática por evento: pedido reserva → faturamento move p/ locação → devolução retorna; mesmo fluxo p/ manutenção — demanda Pavani); **controle por número de série** com apuração de retorno por equipamento |
 | 4 | **Compras** | ⬜ a fazer | solicitações, cotações, pedidos de compra (com **centro de custo** por item), **aprovação por alçada** (grupos de aprovação com aprovadores em níveis, estilo Protheus), recebimento de mercadoria, **importação de XML de NF-e** (entrada por XML com de-para de produtos do fornecedor) |
-| 5 | **Vendas** | ⬜ a fazer | orçamentos, pedidos de venda, faturamento, comissões, devoluções |
+| 5 | **Vendas** | ⬜ a fazer | orçamentos, pedidos de venda, faturamento, comissões, devoluções; **gerador de documentos com layout personalizado por empresa** (orçamento em PDF com foto e especificação técnica por item — demanda Pavani); **relatório de vendas separadas por comissão**; análise de crédito SPC no pedido |
 | 6 | **Fiscal** | 🔶 parcial | certificado digital (existe); emissão NF-e / NFS-e, cálculo de impostos, inutilização/cancelamento, exportação para contador, **captura de XML na SEFAZ (Distribuição DF-e) e manifestação do destinatário** (a fazer) |
 | 7 | **Contabilidade** | ⬜ a fazer | plano de contas contábil, centros de custo, lançamentos contábeis (partidas dobradas, manuais + automáticos), livro diário e razão, balancete, balanço patrimonial e DRE contábil, encerramento de exercício, SPED Contábil (ECD)/ECF via exportação ou API |
-| 8 | **Serviços** | ⬜ a fazer | ordens de serviço, contratos recorrentes, agendamento, **locação de equipamentos** (contratos de locação, disponibilidade/reservas, faturamento recorrente, devolução e manutenção — equipamentos vêm do Patrimonial) |
+| 8 | **Serviços** | ⬜ a fazer | ordens de serviço, contratos recorrentes, agendamento, **locação de equipamentos** (contratos de locação, disponibilidade/reservas, faturamento recorrente, devolução e manutenção — equipamentos vêm do Patrimonial); **abas separadas por natureza** (OS/manutenção × Contratos/locação × Vendas de serviço — demanda Pavani); **OS com layout personalizado** (equipamento marca/modelo/série, condições de chegada, defeitos, acessórios, solução, peças e mão de obra) |
 | 9 | **RH (folha completa)** | ⬜ a fazer | colaboradores, cargos, férias/ausências, cálculo de folha (proventos, descontos, encargos), provisões e lançamentos no financeiro; **eSocial via API de terceiros** (mesma filosofia de adapter do fiscal) |
-| 10 | **CRM** | ⬜ por último | funil de vendas, oportunidades, atividades/follow-up, histórico do cliente — decisão de produto: última fase planejada |
+| 10 | **CRM** | ⬜ por último | funil de vendas, oportunidades, atividades/follow-up, histórico do cliente — decisão de produto: última fase planejada (como opcional, pode ser antecipado por demanda de cliente); **avaliação de integração RD Station** (demanda Pavani) |
 | 11 | **Gestão de Contratos** (opcional, estilo SIGAGCT) | ⬜ a fazer | contratos de compra e venda com vigência, cronograma físico-financeiro, **medições** (aprovação → gera pedido/faturamento), aditivos (valor/prazo), reajustes por índice, cauções e garantias, saldo de contrato, alertas de vencimento |
-| 12 | **Integração com IA** (opcional, transversal) | ⬜ a fazer | categorização automática de lançamentos, sugestão de conciliação, leitura de documentos (boletos/notas/contratos), assistente de consultas em linguagem natural, previsão de fluxo de caixa, detecção de anomalias |
+| 12 | **Integração com IA** (opcional, transversal) | ⬜ a fazer | categorização automática de lançamentos, sugestão de conciliação, leitura de documentos (boletos/notas/contratos), assistente de consultas em linguagem natural, previsão de fluxo de caixa, detecção de anomalias; **medição de consumo com limite incluso** (relatório de uso, alerta de aproximação do teto, trava opcional, cobrança de excedente — modelo comercial firmado na proposta Pavani) |
 | 13 | **Produção (PCP light)** (opcional) | ⬜ a fazer | ficha técnica (BOM) com custo do acabado, ordens de produção (reserva/baixa de insumos, entrada do acabado), apontamento e perdas |
 
 **Módulos opcionais** (habilitáveis por empresa/licença): **Contabilidade, RH, CRM, Gestão de Contratos, Integração com IA e Produção**. O núcleo (Cadastros → Estoque → Compras → Vendas → Fiscal + Financeiro/Plataforma) é o produto base.
@@ -159,6 +159,37 @@ Na saída a responsabilidade inverte: **o sistema calcula**. Motor fiscal própr
 - **NT 2025.002** alterou o layout da NF-e/NFC-e com os grupos de IBS/CBS/IS. Campos **CST-IBS/CBS** e **cClassTrib** por item: obrigatórios em produção a partir de **03/08/2026** para Regime Normal (homologação desde 01/07/2026); Simples/MEI a partir de **01/2027**.
 - Consequência no roadmap: o cadastro de **produto (Fase 1) já nasce com os campos tributários da reforma** (CST-IBS/CBS, cClassTrib) além dos legados (NCM, CFOP, CST ICMS/PIS/COFINS), evitando retrabalho na Fase 5.
 - A API emissora escolhida deve comprovar suporte à NT 2025.002 e ao Emissor Nacional NFS-e — critério de seleção do fornecedor.
+
+## Produto base × clientes (decisão firmada)
+
+**Este roadmap é do produto base ErpMalvezi** — um ERP completo, genérico e parametrizável, que serve a qualquer cliente. Princípios:
+
+1. **Nenhum cliente dirige o roadmap.** Demandas de clientes (como as da proposta Pavani abaixo) só entram no produto quando generalizáveis — viram funcionalidade parametrizável, nunca código específico de um cliente.
+2. **Customização é camada, não fork.** A partir do produto base partem as customizações de cada projeto (templates de documentos, parâmetros, módulos habilitados, integrações configuráveis). Código exclusivo de um cliente vive fora do produto base.
+3. **Produto pronto para apresentação.** O produto base deve estar sempre demonstrável: ambiente de demo com empresas fictícias e dados de exemplo, evoluindo a cada fase concluída — é a vitrine comercial para qualquer prospect.
+
+## Insumo — Proposta Pavani (jul/2026)
+
+Primeira proposta comercial baseada no ErpMalvezi (2 CNPJs — venda e serviço; 8 módulos + opcionais CRM e IA). Serve como **validação de mercado e insumo de funcionalidades** — tudo abaixo foi incorporado de forma genérica ao produto:
+
+### Sequência validada pelo mercado
+O escopo demandado coincide com o núcleo do roadmap: Plataforma + Financeiro (prontos) → Cadastros → Estoque → Compras → Vendas → Fiscal → **Serviços/Locação** (antecipado em relação ao plano original — locação se mostrou dor real de mercado). CRM e IA confirmados como opcionais vendáveis.
+
+### Funcionalidades incorporadas ao roadmap por demanda da proposta
+- **Plataforma**: modo de navegação por **abas de empresa** (estilo Gestão Click) — o usuário alterna entre empresas com um clique, cada módulo sempre no contexto da aba ativa. Convive com a tela de entrada (data/empresa/módulo): o modo de navegação vira **preferência por usuário**.
+- **Cadastros**: integração **SPC/Serasa** (análise de crédito aritmética, adapter `CreditoProvider`) com **cadastro configurável de provedores por empresa** (credenciais cifradas, limite mensal de consultas, log LGPD).
+- **Financeiro**: **configuração de API bancária no cadastro de contas** (aba Integração: Cora/CNAB por conta, credenciais cifradas com Fernet — padrão do módulo de certificados —, webhook, teste de conexão); o `CobrancaProvider` resolve a implementação pela configuração da conta.
+- **Estoque**: **armazém virtual de locação/manutenção** (depósitos lógicos, transferência automática por evento) e **número de série** com retorno por equipamento.
+- **Compras**: cotação com **sugestão de vencedor e justificativa registrada** da escolha.
+- **Vendas/Serviços**: **gerador de documentos com layout personalizado por empresa** (orçamento com foto e especificação técnica por item; OS com ficha técnica completa) — motor de templates, não hardcode.
+- **Serviços**: abas separadas por natureza (OS × Contratos × Vendas de serviço).
+- **CRM**: avaliação de integração **RD Station**.
+- **IA**: **medição de consumo** com limite incluso, alerta, trava opcional e cobrança de excedente.
+- **Financeiro**: integração **Cora** confirmada como requisito de cliente real (era opcional em prospecção).
+
+### Arquitetura produto × cliente (firmada em jul/2026)
+1. **Produto único parametrizável ao máximo** (templates de documentos, flags de módulos, adapters e integrações configuráveis pela tela). Quando um contrato vende "código de propriedade do cliente", o entregável é a instância derivada do produto base + suas customizações — o produto base continua da Malvezi e evolui para todos.
+2. **Hospedagem por cliente**: cada cliente com sua instância isolada (VM/containers próprios), operada pela Malvezi — coerente com "sem multi-tenant SaaS" já decidido.
 
 ## Decisões firmadas (jul/2026)
 

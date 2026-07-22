@@ -122,6 +122,7 @@
     <ul class="feats">
       <li><b>Multi-empresa</b>: várias empresas (CNPJ ou CPF) numa conta; cadastros com escopo global ou específico; visão simultânea opcional.</li>
       <li><b>Entrada com contexto</b>: após o login, informa Data base, Empresa (por código, ex.: <code>001</code>) e Módulo — trocáveis sem relogar.</li>
+      <li><b>Navegação por abas de empresa</b> (preferência por usuário): alternância entre empresas com um clique, cada módulo sempre no contexto da aba ativa.</li>
       <li><b>Administração de acessos</b>: matriz usuário × menu × ação em árvore módulo → menu → ações; concessão por empresa ou global; cópia entre usuários; usuário novo nasce sem acesso.</li>
       <li><b>Auditoria</b> em toda alteração financeira (quem, quando, valor anterior/novo); <b>soft delete</b> — nada com histórico é excluído.</li>
       <li>Notificações (e-mail/sistema), busca global, certificado digital A1, anexos em storage S3/MinIO.</li>
@@ -157,6 +158,7 @@
       <li><b>Centros de custo</b>: usados por Compras, Vendas, lançamentos financeiros e Contabilidade.</li>
       <li>Unidades de medida, tabelas de preço, transportadoras.</li>
       <li>Clientes e fornecedores (tabela unificada de contatos, já disponível) com consulta CNPJ.</li>
+      <li><b>Análise de crédito via SPC</b> (integração opcional): consulta aritmética no cadastro do cliente e no pedido de venda — a decisão é sempre do usuário.</li>
     </ul>
   </section>
 
@@ -166,6 +168,8 @@
       <li>Múltiplos depósitos por empresa; saldos por depósito.</li>
       <li>Movimentações de entrada, saída, ajuste e transferência entre depósitos (atômicas, como as transferências bancárias).</li>
       <li>Custo médio; inventário com contagem e acerto; alertas de estoque mínimo gerando sugestão de solicitação de compra.</li>
+      <li><b>Armazém virtual de locação/manutenção</b>: depósitos lógicos com transferência automática por evento — pedido reserva, faturamento move para o armazém de locados, devolução retorna ao disponível; mesmo fluxo para manutenção.</li>
+      <li><b>Controle por número de série</b>, com apuração do retorno obtido por equipamento.</li>
     </ul>
   </section>
 
@@ -181,7 +185,7 @@
     </div>
     <ul class="feats">
       <li><b>Solicitação de compra</b>: manual ou gerada por estoque mínimo; item, quantidade, centro de custo, justificativa.</li>
-      <li><b>Cotação</b>: mapa comparativo de N fornecedores (preço, prazo, frete), vencedor por item ou global, pré-preenchido por Produtos × Fornecedores. Etapas puláveis por configuração (compra direta).</li>
+      <li><b>Cotação</b>: mapa comparativo de N fornecedores (preço, prazo, frete), vencedor por item ou global, pré-preenchido por Produtos × Fornecedores; <b>sugestão de vencedor pelo sistema com justificativa da escolha registrada</b>. Etapas puláveis por configuração (compra direta).</li>
       <li><b>Pedido de compra</b>: centro de custo obrigatório por item; destino <code>estoque</code> ou <code>imobilizado</code> (ativa o bem no Patrimonial).</li>
       <li><b>Aprovação por alçada</b> (estilo Protheus): grupos de aprovação por empresa, níveis 1..N com limite de valor, aprovadores com substituto e vigência; rejeição devolve com motivo; alteração de valor reinicia o fluxo; painel de aprovações pendentes multi-empresa.</li>
       <li><b>Importação de XML de NF-e</b>: upload ou captura automática; de-para de produtos com aprendizado; duplicatas do XML viram parcelas do contas a pagar.</li>
@@ -199,7 +203,7 @@
       <span class="etapa">NF-e/NFS-e + Receber + Baixa estoque</span>
     </div>
     <ul class="feats">
-      <li><b>Orçamento</b>: validade, versões, envio ao cliente (PDF/link); aprovado vira pedido com um clique.</li>
+      <li><b>Orçamento</b>: validade, versões, envio ao cliente (PDF/link); aprovado vira pedido com um clique. <b>Layout personalizado por empresa</b> via motor de templates — com foto e especificação técnica por item.</li>
       <li><b>Pedido de venda</b>: reserva de estoque; análise de crédito com limite por cliente e consulta à inadimplência (bloqueio ou liberação); TES de saída define CFOP, movimentação e tributação.</li>
       <li><b>Faturamento total ou parcial</b>: um pedido, N entregas/notas; contas a receber com parcelamento da condição de pagamento.</li>
       <li><b>Impostos na saída — o sistema calcula</b>: motor fiscal próprio (ICMS/ST/DIFAL, IPI, PIS/COFINS + IBS/CBS na transição da reforma), parametrizado por produto, TES, regime da empresa, UFs e cliente.</li>
@@ -222,7 +226,8 @@
   <section class="dominio" id="servicos">
     <h2><span class="num">08</span> Serviços e Locação de Equipamentos <span class="pill p-plan">Planejado — Fase 7</span></h2>
     <ul class="feats">
-      <li><b>Ordens de serviço</b>: abertura, execução, apontamento, faturamento como NFS-e.</li>
+      <li><b>Abas separadas por natureza</b>: Ordens de Serviço (manutenção), Contratos (locação) e Vendas de Serviço — cada uma visualizada isoladamente.</li>
+      <li><b>Ordens de serviço</b>: abertura, execução, apontamento, faturamento como NFS-e. <b>Layout personalizado</b> com ficha técnica completa: equipamento (marca/modelo/série), condições de chegada, defeitos, acessórios, solução aplicada, peças e mão de obra.</li>
       <li><b>Contratos recorrentes</b> com faturamento automático (motor de recorrência já existente); agendamento.</li>
       <li><b>Locação de equipamentos</b>: equipamentos vêm do Patrimonial; contrato com itens e período; agenda de disponibilidade e reservas (sem dupla locação); faturamento recorrente → contas a receber; devolução com vistoria (avarias → cobrança extra); manutenção.</li>
     </ul>
@@ -254,6 +259,7 @@
       <li>Funil de vendas com etapas configuráveis; oportunidades com valor e probabilidade.</li>
       <li>Atividades e follow-up; histórico completo do cliente (pedidos, títulos, inadimplência).</li>
       <li>Oportunidade ganha vira orçamento/pedido de venda com um clique.</li>
+      <li>Integração com ferramentas de captação (avaliação de <b>RD Station</b>) conforme demanda do cliente.</li>
     </ul>
   </section>
 
@@ -277,6 +283,7 @@
       <li><b>Leitura de documentos</b>: boletos, notas, comprovantes e contratos anexados viram dados estruturados (pré-lançamento).</li>
       <li><b>Assistente em linguagem natural</b>: "quanto gastei com manutenção da frota no trimestre?" — consultas respondidas com dados do próprio ERP, respeitando permissões.</li>
       <li><b>Previsão de fluxo de caixa</b> e detecção de anomalias (lançamento fora do padrão, duplicidade provável).</li>
+      <li><b>Medição de consumo</b>: limite de uso incluso na mensalidade, relatório transparente, alerta ao se aproximar do teto, trava opcional e cobrança do excedente só com autorização.</li>
     </ul>
   </section>
 
