@@ -11,7 +11,13 @@ from app.core.deps import CurrentUserId
 from app.core.exceptions import DomainError, NotFoundError, PermissionDeniedError
 from app.core.storage import StorageProvider, get_storage_provider
 from app.core.utils import new_uuid
-from app.modules.patrimonio.models import ImovelAnexo, ImovelMatricula, StatusImovel, StatusVeiculo, VeiculoAnexo
+from app.modules.patrimonio.models import (
+    ImovelAnexo,
+    ImovelMatricula,
+    StatusImovel,
+    StatusVeiculo,
+    VeiculoAnexo,
+)
 from app.modules.patrimonio.repository import ImovelRepository, VeiculoRepository
 from app.modules.patrimonio.schemas import (
     ImovelCreate,
@@ -370,8 +376,8 @@ async def download_anexo_veiculo(
         raise HTTPException(status_code=404, detail="Anexo não encontrado.")
     try:
         conteudo = await storage.ler(anexo.caminho)
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Arquivo não encontrado no storage.")
+    except FileNotFoundError as err:
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado no storage.") from err
     return Response(content=conteudo, media_type=anexo.mime_type,
                     headers={"Content-Disposition": f'attachment; filename="{anexo.nome_original}"'})
 
@@ -466,8 +472,8 @@ async def download_anexo_imovel(
         raise HTTPException(status_code=404, detail="Anexo não encontrado.")
     try:
         conteudo = await storage.ler(anexo.caminho)
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Arquivo não encontrado no storage.")
+    except FileNotFoundError as err:
+        raise HTTPException(status_code=404, detail="Arquivo não encontrado no storage.") from err
     return Response(content=conteudo, media_type=anexo.mime_type,
                     headers={"Content-Disposition": f'attachment; filename="{anexo.nome_original}"'})
 

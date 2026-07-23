@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.deps import CurrentUserId
 from app.core.exceptions import DomainError, NotFoundError, PermissionDeniedError
-from app.modules.contato.repository import ContatoRepository
 from app.modules.contato.cnpj_lookup import consultar_cnpj
+from app.modules.contato.repository import ContatoRepository
 from app.modules.contato.schemas import (
     ConsultaCnpjResponse,
     ContatoCreate,

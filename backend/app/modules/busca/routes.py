@@ -8,10 +8,10 @@ from app.core.database import get_db
 from app.core.deps import CurrentUserId
 from app.modules.categoria.models import Categoria
 from app.modules.contato.models import Contato
+from app.modules.contato.schemas import ContatoResponse
 from app.modules.empresa.models import UsuarioEmpresa
 from app.modules.lancamento.models import Lancamento, StatusLancamento
 from app.modules.lancamento.schemas import LancamentoResponse
-from app.modules.contato.schemas import ContatoResponse
 
 router = APIRouter(prefix="/busca", tags=["busca"])
 
@@ -40,7 +40,7 @@ async def busca_global(
         .limit(10)
     )
     res_lanc = await db.execute(stmt_lanc)
-    lancamentos = [LancamentoResponse.model_validate(l) for l in res_lanc.scalars().all()]
+    lancamentos = [LancamentoResponse.model_validate(lc) for lc in res_lanc.scalars().all()]
 
     # Contatos
     stmt_cont = (

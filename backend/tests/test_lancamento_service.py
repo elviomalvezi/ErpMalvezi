@@ -193,16 +193,22 @@ class TestCriarSimples:
         assert lct.fatura_id == fatura.id
         mock_fatura_svc.delta_valor_total.assert_called_once_with(fatura.id, Decimal("1500"))
 
-    async def test_conta_outro_usuario_falha(
+    async def test_empresa_sem_vinculo_falha(
         self,
-        svc: LancamentoService,
+        mock_repo: AsyncMock,
         mock_conta_repo: AsyncMock,
+        mock_fatura_svc: AsyncMock,
     ) -> None:
-        conta = _make_conta(usuario_id=uuid.uuid4())
-        mock_conta_repo.get_by_id.return_value = conta
+        # Regra atual: o acesso é validado pelo vínculo usuário × empresa,
+        # não pela propriedade da conta.
+        mock_empresa_repo = AsyncMock()
+        mock_empresa_repo.get_vinculo.return_value = None
+        svc = LancamentoService(
+            mock_repo, mock_conta_repo, mock_fatura_svc, empresa_repo=mock_empresa_repo
+        )
 
         with pytest.raises(PermissionDeniedError):
-            await svc.criar_simples(_make_create(conta_bancaria_id=conta.id), uuid.uuid4())
+            await svc.criar_simples(_make_create(), uuid.uuid4())
 
     async def test_conta_nao_encontrada_falha(
         self,
@@ -362,6 +368,8 @@ class TestRegistrarBaixa:
             LancamentoBaixaCreate(
                 valor_pago=Decimal("100"),
                 data_pagamento=date(2024, 1, 10),
+                conta_bancaria_id=uuid.uuid4(),
+                categoria_id=uuid.uuid4(),
             ),
             u_id,
         )
@@ -380,28 +388,35 @@ class TestRegistrarBaixa:
             LancamentoBaixaCreate(
                 valor_pago=Decimal("40"),
                 data_pagamento=date(2024, 1, 5),
+                conta_bancaria_id=uuid.uuid4(),
+                categoria_id=uuid.uuid4(),
             ),
             u_id,
         )
         assert result.status == StatusLancamento.PENDENTE
         assert result.valor_pago == Decimal("40")
 
-    async def test_valor_excede_saldo_falha(
+    async def test_baixa_acima_do_valor_marca_pago(
         self, svc: LancamentoService, mock_repo: AsyncMock
     ) -> None:
+        # Regra atual: é permitido baixar acima do previsto (pagamento maior que
+        # o valor do lançamento); o total acumula e o status vira PAGO.
         u_id = uuid.uuid4()
         lct = _make_lancamento(usuario_id=u_id, valor=Decimal("100"), valor_pago=Decimal("60"))
         mock_repo.get_by_id.return_value = lct
 
-        with pytest.raises(DomainError, match="saldo restante"):
-            await svc.registrar_baixa(
-                lct.id,
-                LancamentoBaixaCreate(
-                    valor_pago=Decimal("50"),
-                    data_pagamento=date(2024, 1, 10),
-                ),
-                u_id,
-            )
+        result = await svc.registrar_baixa(
+            lct.id,
+            LancamentoBaixaCreate(
+                valor_pago=Decimal("50"),
+                data_pagamento=date(2024, 1, 10),
+                conta_bancaria_id=uuid.uuid4(),
+                categoria_id=uuid.uuid4(),
+            ),
+            u_id,
+        )
+        assert result.valor_pago == Decimal("110")
+        assert result.status == StatusLancamento.PAGO
 
     async def test_ja_pago_falha(
         self, svc: LancamentoService, mock_repo: AsyncMock
@@ -416,6 +431,8 @@ class TestRegistrarBaixa:
                 LancamentoBaixaCreate(
                     valor_pago=Decimal("100"),
                     data_pagamento=date(2024, 1, 10),
+                    conta_bancaria_id=uuid.uuid4(),
+                    categoria_id=uuid.uuid4(),
                 ),
                 u_id,
             )
@@ -433,6 +450,8 @@ class TestRegistrarBaixa:
                 LancamentoBaixaCreate(
                     valor_pago=Decimal("100"),
                     data_pagamento=date(2024, 1, 10),
+                    conta_bancaria_id=uuid.uuid4(),
+                    categoria_id=uuid.uuid4(),
                 ),
                 u_id,
             )
@@ -542,5 +561,6 @@ class TestObter:
     ) -> None:
         lct = _make_lancamento(usuario_id=uuid.uuid4())
         mock_repo.get_by_id.return_value = lct
+        mock_repo.tem_acesso.return_value = False
         with pytest.raises(PermissionDeniedError):
             await svc.obter(lct.id, uuid.uuid4())

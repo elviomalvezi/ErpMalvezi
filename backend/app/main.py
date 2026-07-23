@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
@@ -9,10 +10,10 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.health import router as health_router
 from app.core.config import settings
+from app.modules.auditoria.routes import router as auditoria_router
 from app.modules.busca.routes import router as busca_router
 from app.modules.categoria.routes import router as categoria_router
 from app.modules.certificado.routes import router as certificado_router
-from app.modules.patrimonio.routes import router as patrimonio_router
 from app.modules.conciliacao.routes import router as conciliacao_router
 from app.modules.conta_bancaria.routes import router as conta_bancaria_router
 from app.modules.contato.routes import router as contato_router
@@ -22,12 +23,12 @@ from app.modules.fatura.routes import router as fatura_router
 from app.modules.fluxo_caixa.routes import router as fluxo_caixa_router
 from app.modules.lancamento.routes import router as lancamento_router
 from app.modules.notificacao.routes import router as notificacao_router
+from app.modules.patrimonio.routes import router as patrimonio_router
+from app.modules.permissao.routes import router as permissao_router
 from app.modules.pessoa.routes import router as pessoa_router
 from app.modules.pessoa.routes import router_certificado as pessoa_certificado_router
-from app.modules.permissao.routes import router as permissao_router
 from app.modules.relatorio.routes import router as relatorio_router
 from app.modules.transferencia.routes import router as transferencia_router
-from app.modules.auditoria.routes import router as auditoria_router
 from app.modules.usuario.routes import router_auth, router_usuarios
 
 logger = structlog.get_logger()
@@ -57,10 +58,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("backend_started", environment=settings.environment)
     yield
     task.cancel()
-    try:
+    with contextlib.suppress(asyncio.CancelledError):
         await task
-    except asyncio.CancelledError:
-        pass
 
 
 app = FastAPI(

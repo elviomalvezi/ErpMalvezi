@@ -1,7 +1,7 @@
 """Registro de auditoria para alterações em dados financeiros."""
 import uuid
 from contextvars import ContextVar
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import structlog
 from sqlalchemy import event
@@ -62,7 +62,7 @@ def registrar_listeners(session_factory) -> None:  # type: ignore[no-untyped-def
         from app.modules.auditoria.models import Auditoria
 
         usuario_id = get_usuario_auditoria()
-        agora = datetime.now(timezone.utc)
+        agora = datetime.now(UTC)
         entradas: list[Auditoria] = []
 
         for obj in session.new:

@@ -11,7 +11,8 @@ from app.modules.categoria.models import Categoria as CategoriaModel
 from app.modules.categoria.repository import CategoriaRepository
 from app.modules.conta_bancaria.models import ContaBancaria, TipoConta
 from app.modules.conta_bancaria.repository import ContaBancariaRepository
-from app.modules.contato.models import Contato as ContatoModel, EscopoContato, TipoContato
+from app.modules.contato.models import Contato as ContatoModel
+from app.modules.contato.models import EscopoContato, TipoContato
 from app.modules.contato.repository import ContatoRepository
 from app.modules.empresa.models import Empresa, TipoPessoa, UsuarioEmpresa
 from app.modules.empresa.repository import EmpresaRepository
@@ -455,11 +456,11 @@ class LancamentoService:
 
         empresa_destino = empresa_id or original.empresa_id
         mesma_empresa = empresa_destino == original.empresa_id
-        if not mesma_empresa:
-            if self._empresa_repo is None or (
-                await self._empresa_repo.get_vinculo(usuario_id, empresa_destino)
-            ) is None:
-                raise PermissionDeniedError("Sem acesso à empresa de destino.")
+        if not mesma_empresa and (
+            self._empresa_repo is None
+            or (await self._empresa_repo.get_vinculo(usuario_id, empresa_destino)) is None
+        ):
+            raise PermissionDeniedError("Sem acesso à empresa de destino.")
 
         novo = Lancamento(
             id=new_uuid(),
@@ -563,26 +564,24 @@ class LancamentoService:
                 continue
 
             cat_id = _to_uuid_or_none(payload.get("categoria_id"))
-            if cat_id is None:
-                if cat_nome := _to_str_or_none(payload.get("categoria_nome")):
-                    cache_key = f"{row_tipo}:{cat_nome.lower()}"
-                    if cache_key in _cat_cache:
-                        cat_id = _cat_cache[cache_key]
-                    else:
-                        cat_id = await self._resolver_categoria_por_nome(cat_nome, row_tipo, usuario_id)
-                        _cat_cache[cache_key] = cat_id
+            if cat_id is None and (cat_nome := _to_str_or_none(payload.get("categoria_nome"))):
+                cache_key = f"{row_tipo}:{cat_nome.lower()}"
+                if cache_key in _cat_cache:
+                    cat_id = _cat_cache[cache_key]
+                else:
+                    cat_id = await self._resolver_categoria_por_nome(cat_nome, row_tipo, usuario_id)
+                    _cat_cache[cache_key] = cat_id
 
             cont_id = _to_uuid_or_none(payload.get("contato_id"))
-            if cont_id is None:
-                if cont_nome := _to_str_or_none(payload.get("contato_nome")):
-                    cont_key = f"{row_empresa_id}:{cont_nome.lower()}"
-                    if cont_key in _cont_cache:
-                        cont_id = _cont_cache[cont_key]
-                    else:
-                        cont_id = await self._resolver_contato_por_nome(
-                            cont_nome, usuario_id, row_empresa_id
-                        )
-                        _cont_cache[cont_key] = cont_id
+            if cont_id is None and (cont_nome := _to_str_or_none(payload.get("contato_nome"))):
+                cont_key = f"{row_empresa_id}:{cont_nome.lower()}"
+                if cont_key in _cont_cache:
+                    cont_id = _cont_cache[cont_key]
+                else:
+                    cont_id = await self._resolver_contato_por_nome(
+                        cont_nome, usuario_id, row_empresa_id
+                    )
+                    _cont_cache[cont_key] = cont_id
 
             # Resolver conta bancária por banco + agência + número
             conta_id = _to_uuid_or_none(payload.get("conta_bancaria_id"))

@@ -146,6 +146,7 @@ class TestCriar:
     ) -> None:
         origem = _make_conta(usuario_id=uuid.uuid4())
         mock_conta_repo.get_by_id.side_effect = [origem]
+        mock_conta_repo.tem_acesso.return_value = False
 
         with pytest.raises(PermissionDeniedError):
             await svc.criar(_make_create(conta_origem_id=origem.id), uuid.uuid4())
@@ -157,6 +158,7 @@ class TestCriar:
         origem = _make_conta(usuario_id=u_id)
         destino = _make_conta(usuario_id=uuid.uuid4())
         mock_conta_repo.get_by_id.side_effect = [origem, destino]
+        mock_conta_repo.tem_acesso.side_effect = [True, False]
 
         with pytest.raises(PermissionDeniedError):
             await svc.criar(

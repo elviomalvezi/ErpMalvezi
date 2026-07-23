@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.core.deps import RequireAdmin, RequireAdminOrGestor
+from app.core.deps import RequireAdminOrGestor
 from app.core.exceptions import DomainError, NotFoundError
 from app.modules.permissao.repository import PermissaoRepository
 from app.modules.permissao.schemas import (

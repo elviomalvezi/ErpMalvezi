@@ -157,6 +157,7 @@ async def listar_empresas_usuario(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[uuid.UUID]:
     from sqlalchemy import select
+
     from app.modules.empresa.models import UsuarioEmpresa
     result = await db.execute(
         select(UsuarioEmpresa.empresa_id).where(UsuarioEmpresa.usuario_id == target_usuario_id)
@@ -171,9 +172,10 @@ async def definir_empresas_usuario(
     _admin: RequireAdminOrGestor,
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> list[uuid.UUID]:
-    from sqlalchemy import delete, select
-    from app.modules.empresa.models import UsuarioEmpresa
+    from sqlalchemy import delete
+
     from app.core.utils import new_uuid
+    from app.modules.empresa.models import UsuarioEmpresa
 
     # Remove todas as associações atuais
     await db.execute(

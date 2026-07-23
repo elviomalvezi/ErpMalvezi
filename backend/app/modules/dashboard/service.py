@@ -4,8 +4,12 @@ from decimal import Decimal
 
 from app.modules.dashboard.repository import DashboardRepository
 from app.modules.dashboard.schemas import (
-    CategoriaGrafico, DashboardResponse, EvolucaoMensal,
-    GraficosResponse, KpiLancamentos, LancamentoPendente,
+    CategoriaGrafico,
+    DashboardResponse,
+    EvolucaoMensal,
+    GraficosResponse,
+    KpiLancamentos,
+    LancamentoPendente,
 )
 from app.modules.lancamento.models import StatusLancamento, TipoLancamento
 

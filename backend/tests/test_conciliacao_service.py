@@ -102,6 +102,7 @@ class TestImportarOFX:
     ) -> None:
         conta = _make_conta(usuario_id=uuid.uuid4())
         mock_conta_repo.get_by_id.return_value = conta
+        mock_conta_repo.tem_acesso.return_value = False
 
         with pytest.raises(PermissionDeniedError):
             await svc.importar_ofx(b"", "extrato.ofx", conta.id, uuid.uuid4(), uuid.uuid4())
@@ -178,6 +179,7 @@ class TestConciliar:
         transacao = _make_transacao(usuario_id=u_id)
         lancamento = MagicMock()
         lancamento.usuario_id = u_id
+        lancamento.empresa_id = transacao.empresa_id  # mesma empresa da transação
 
         mock_repo.get_transacao.return_value = transacao
         mock_lancamento_repo.get_by_id.return_value = lancamento
@@ -216,6 +218,7 @@ class TestConciliar:
     ) -> None:
         transacao = _make_transacao(usuario_id=uuid.uuid4())
         mock_repo.get_transacao.return_value = transacao
+        mock_repo.tem_acesso_empresa.return_value = False
 
         with pytest.raises(PermissionDeniedError):
             await svc.conciliar(transacao.id, uuid.uuid4(), uuid.uuid4())
@@ -238,6 +241,7 @@ class TestCriarLancamento:
             tipo=TipoLancamento.DESPESA,
             data_competencia=date(2024, 1, 15),
             data_vencimento=date(2024, 1, 15),
+            categoria_id=uuid.uuid4(),
         )
         result = await svc.criar_lancamento_de_transacao(transacao.id, data, u_id)
 
@@ -269,14 +273,16 @@ class TestCriarLancamento:
         kwargs = mock_repo.upsert_regra.call_args.kwargs
         assert kwargs["categoria_id"] == cat_id
 
-    async def test_sem_categoria_nao_salva_regra(
+    async def test_padrao_vazio_nao_salva_regra(
         self,
         svc: ConciliacaoService,
         mock_repo: AsyncMock,
         mock_lancamento_repo: AsyncMock,
     ) -> None:
+        # Categoria agora é obrigatória no schema; a regra de aprendizado só é
+        # dispensada quando a descrição da transação não gera padrão útil.
         u_id = uuid.uuid4()
-        transacao = _make_transacao(usuario_id=u_id)
+        transacao = _make_transacao(usuario_id=u_id, descricao="")
         mock_repo.get_transacao.return_value = transacao
 
         data = CriarLancamentoRequest(
@@ -285,6 +291,7 @@ class TestCriarLancamento:
             tipo=TipoLancamento.DESPESA,
             data_competencia=date(2024, 1, 15),
             data_vencimento=date(2024, 1, 15),
+            categoria_id=uuid.uuid4(),
         )
         await svc.criar_lancamento_de_transacao(transacao.id, data, u_id)
 
@@ -306,6 +313,7 @@ class TestCriarLancamento:
                     tipo=TipoLancamento.DESPESA,
                     data_competencia=date(2024, 1, 1),
                     data_vencimento=date(2024, 1, 1),
+                    categoria_id=uuid.uuid4(),
                 ),
                 u_id,
             )

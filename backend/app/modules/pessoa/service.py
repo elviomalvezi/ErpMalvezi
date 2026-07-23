@@ -3,7 +3,7 @@ from datetime import date
 
 import structlog
 
-from app.core.exceptions import ConflictError, NotFoundError, PermissionDeniedError
+from app.core.exceptions import ConflictError, NotFoundError
 from app.modules.certificado.service import _status
 from app.modules.pessoa.models import Pessoa
 from app.modules.pessoa.repository import PessoaRepository

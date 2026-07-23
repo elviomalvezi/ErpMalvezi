@@ -169,7 +169,8 @@ class DashboardRepository:
         empresa_id: uuid.UUID | None = None,
         meses: int = 6,
     ) -> list[dict]:
-        from datetime import date as date_type, timedelta
+        from datetime import date as date_type
+        from datetime import timedelta
 
         hoje = date_type.today()
         resultado = []

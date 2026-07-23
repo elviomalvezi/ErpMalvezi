@@ -12,9 +12,9 @@ from app.modules.lancamento.importacao import (
 
 def test_ler_csv_e_normalizar_linhas() -> None:
     conteudo = (
-        "Descricao,Valor,Competencia,Vencimento,Observacoes\n"
-        "Aluguel,1500,01/05/2026,10/05/2026,Pago no banco\n"
-    ).encode("utf-8")
+        b"Descricao,Valor,Competencia,Vencimento,Observacoes\n"
+        b"Aluguel,1500,01/05/2026,10/05/2026,Pago no banco\n"
+    )
 
     arquivo = ler_planilha("contas.csv", conteudo)
     mapeamento = validar_mapeamento(
@@ -42,9 +42,9 @@ def test_mapeamento_obrigatorio_falta() -> None:
 
 def test_uuid_invalido_vira_erro_de_preview() -> None:
     conteudo = (
-        "Descricao,Valor,Competencia,Vencimento,Categoria\n"
-        "Internet,250,2026-05-01,2026-05-10,financeiro\n"
-    ).encode("utf-8")
+        b"Descricao,Valor,Competencia,Vencimento,Categoria\n"
+        b"Internet,250,2026-05-01,2026-05-10,financeiro\n"
+    )
     arquivo = ler_planilha("contas.csv", conteudo)
     mapeamento = validar_mapeamento(
         {

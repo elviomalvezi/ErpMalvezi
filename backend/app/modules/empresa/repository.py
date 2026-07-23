@@ -63,6 +63,7 @@ class EmpresaRepository:
     async def has_lancamentos(self, empresa_id: uuid.UUID) -> bool:
         """Verifica se a empresa possui lançamentos (impede exclusão definitiva)."""
         from sqlalchemy import func
+
         from app.modules.lancamento.models import Lancamento
 
         result = await self.db.execute(

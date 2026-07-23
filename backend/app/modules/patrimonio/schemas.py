@@ -11,7 +11,6 @@ from app.modules.patrimonio.models import (
     TipoImovel,
 )
 
-
 # ─────────────────────────────────────── Veículo ─────────────────────────────
 
 

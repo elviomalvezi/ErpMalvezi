@@ -4,7 +4,6 @@ Reaproveita a biblioteca `cryptography`. Não persiste a chave privada — só l
 dados públicos (titular, emissor, validade, série) para controle de vencimento.
 """
 
-from datetime import date
 
 from cryptography import x509
 from cryptography.hazmat.primitives.serialization import pkcs12

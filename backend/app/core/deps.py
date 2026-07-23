@@ -80,6 +80,7 @@ async def _get_admin_user_id(
     db: DbDep,
 ) -> uuid.UUID:
     from sqlalchemy import select
+
     from app.modules.usuario.models import Usuario
 
     result = await db.execute(select(Usuario.admin).where(Usuario.id == usuario_id))
@@ -96,6 +97,7 @@ async def _get_admin_or_gestor_id(
     db: DbDep,
 ) -> uuid.UUID:
     from sqlalchemy import select
+
     from app.modules.usuario.models import Usuario
 
     result = await db.execute(

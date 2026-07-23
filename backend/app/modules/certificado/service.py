@@ -174,9 +174,10 @@ class CertificadoService:
         # Datas de validade são imutáveis após a inclusão.
         update_data.pop("validade_inicio", None)
         update_data.pop("validade_fim", None)
-        if "empresa_id" in update_data and update_data["empresa_id"] is not None:
-            if not await self._repo.acesso_empresa(usuario_id, update_data["empresa_id"]):
-                raise PermissionDeniedError("Sem acesso à empresa selecionada.")
+        if update_data.get("empresa_id") is not None and not await self._repo.acesso_empresa(
+            usuario_id, update_data["empresa_id"]
+        ):
+            raise PermissionDeniedError("Sem acesso à empresa selecionada.")
         for field, value in update_data.items():
             setattr(cert, field, value)
         await self._repo.commit()

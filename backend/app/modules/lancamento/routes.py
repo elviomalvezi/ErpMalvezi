@@ -1,6 +1,6 @@
+import json
 import uuid
 from datetime import date
-import json
 from typing import Annotated
 
 from fastapi import APIRouter, Body, Depends, File, Form, HTTPException, Query, UploadFile, status
@@ -30,12 +30,12 @@ from app.modules.lancamento.models import LancamentoAnexo, StatusLancamento, Tip
 from app.modules.lancamento.repository import LancamentoRepository
 from app.modules.lancamento.schemas import (
     ExtratoResponse,
-    LancamentoBaixaCreate,
-    LancamentoAnexoResponse,
     ImportacaoAnaliseResponse,
     ImportacaoMapeamentoPayload,
     ImportacaoPreviewResponse,
     ImportacaoResultadoResponse,
+    LancamentoAnexoResponse,
+    LancamentoBaixaCreate,
     LancamentoCreate,
     LancamentoParceladoCreate,
     LancamentoRecorrenteCreate,
@@ -571,8 +571,8 @@ async def ver_anexo(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Arquivo não encontrado no storage.")
         try:
             conteudo = await storage.ler(anexo.caminho)
-        except (FileNotFoundError, PermissionError):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Arquivo não encontrado no storage.")
+        except (FileNotFoundError, PermissionError) as err:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Arquivo não encontrado no storage.") from err
     # Só exibe inline tipos seguros para o navegador renderizar (imagem/PDF).
     # Demais tipos vão como anexo, evitando execução de conteúdo no contexto da origem.
     inline = anexo.mime_type in {"application/pdf", "image/jpeg", "image/png", "image/gif", "image/webp"}
@@ -615,8 +615,8 @@ async def download_anexo(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Arquivo não encontrado no storage.")
         try:
             conteudo = await storage.ler(anexo.caminho)
-        except (FileNotFoundError, PermissionError):
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Arquivo não encontrado no storage.")
+        except (FileNotFoundError, PermissionError) as err:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Arquivo não encontrado no storage.") from err
 
     nome = _sanitizar_nome(anexo.nome_original)
     return Response(

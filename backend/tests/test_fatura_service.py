@@ -302,5 +302,6 @@ class TestObter:
     async def test_outro_usuario_falha(self, svc: FaturaService, mock_repo: AsyncMock) -> None:
         fatura = _make_fatura(usuario_id=uuid.uuid4())
         mock_repo.get_by_id.return_value = fatura
+        mock_repo.tem_acesso.return_value = False
         with pytest.raises(PermissionDeniedError):
             await svc.obter(fatura.id, uuid.uuid4())

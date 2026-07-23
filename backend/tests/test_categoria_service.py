@@ -34,6 +34,8 @@ def _make_cat(
     c.tipo = TipoCategoria.RECEITA
     c.escopo = EscopoCategoria.GLOBAL
     c.empresa_id = None
+    c.exigir_veiculo = False
+    c.exigir_imovel = False
     return c
 
 
@@ -95,6 +97,7 @@ class TestCriar:
     ) -> None:
         parent = _make_cat(nivel=1, usuario_id=uuid.uuid4())
         mock_repo.get_by_id.return_value = parent
+        mock_repo.tem_acesso.return_value = False
 
         with pytest.raises(PermissionDeniedError):
             await svc.criar(

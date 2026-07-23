@@ -68,6 +68,7 @@ class TestLogin:
         usuario.nome = "Teste"
         usuario.ativo = True
         usuario.senha_hash = hash_password("senha123")
+        usuario.token_version = 0  # claim "tv" do JWT precisa ser serializável
         mock_repo.get_by_email.return_value = usuario
         mock_repo.criar_sessao.return_value = MagicMock(spec=Sessao)
 

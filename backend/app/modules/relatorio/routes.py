@@ -62,7 +62,7 @@ async def dre(
         ant_map = {r["categoria_id"]: r["total"] for r in anterior}
         linhas = []
         for r in atual:
-            total_ant = ant_map.get(r["categoria_id"], None) or anterior_total_from_rows(anterior, r["categoria_id"])
+            total_ant = ant_map.get(r["categoria_id"]) or anterior_total_from_rows(anterior, r["categoria_id"])
             variacao = None
             if total_ant and total_ant != 0:
                 variacao = float((r["total"] - total_ant) / total_ant * 100)

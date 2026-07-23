@@ -101,6 +101,7 @@ class TestObter:
     ) -> None:
         conta = _make_conta(usuario_id=uuid.uuid4())
         mock_repo.get_by_id.return_value = conta
+        mock_repo.tem_acesso.return_value = False
         with pytest.raises(PermissionDeniedError):
             await svc.obter(conta.id, uuid.uuid4())
 

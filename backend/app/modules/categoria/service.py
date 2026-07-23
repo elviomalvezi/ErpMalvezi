@@ -246,8 +246,9 @@ class CategoriaService:
         destino_id: uuid.UUID,
         usuario_id: uuid.UUID,
     ) -> Categoria:
-        from app.modules.lancamento.models import Lancamento
         from sqlalchemy import update
+
+        from app.modules.lancamento.models import Lancamento
 
         origem = await self.obter(origem_id, usuario_id)
         destino = await self.obter(destino_id, usuario_id)
@@ -292,6 +293,8 @@ def _construir_arvore(categorias: list[Categoria]) -> list[CategoriaTreeNode]:
             escopo=cat.escopo,
             nivel=cat.nivel,
             codigo=cat.codigo,
+            exigir_veiculo=cat.exigir_veiculo,
+            exigir_imovel=cat.exigir_imovel,
             ativa=cat.ativa,
             filhos=[],
         )

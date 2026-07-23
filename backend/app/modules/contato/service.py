@@ -131,8 +131,9 @@ class ContatoService:
         destino_id: uuid.UUID,
         usuario_id: uuid.UUID,
     ) -> Contato:
-        from app.modules.lancamento.models import Lancamento
         from sqlalchemy import update
+
+        from app.modules.lancamento.models import Lancamento
 
         origem = await self.obter(origem_id, usuario_id)
         destino = await self.obter(destino_id, usuario_id)
