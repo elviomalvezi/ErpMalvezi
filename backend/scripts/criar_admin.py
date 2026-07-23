@@ -40,7 +40,7 @@ async def main(email: str, nome: str, senha: str) -> None:
         )
         session.add(admin)
         await session.commit()
-        print(f"[ok] Administrador criado com sucesso.")
+        print("[ok] Administrador criado com sucesso.")
         print(f"     E-mail : {email}")
         print(f"     Nome   : {nome}")
 
