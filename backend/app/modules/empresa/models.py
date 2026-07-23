@@ -30,9 +30,29 @@ class RegimeTributario(enum.StrEnum):
     MEI = "MEI"
 
 
+class DominioSistema(enum.StrEnum):
+    """Domínios (módulos) do ERP habilitáveis por empresa."""
+
+    FINANCEIRO = "financeiro"
+    CADASTROS = "cadastros"
+    ESTOQUE = "estoque"
+    COMPRAS = "compras"
+    VENDAS = "vendas"
+    FISCAL = "fiscal"
+    CONTABILIDADE = "contabilidade"
+    SERVICOS = "servicos"
+    CRM = "crm"
+    RH = "rh"
+    CONTRATOS = "contratos"
+    IA = "ia"
+    PRODUCAO = "producao"
+
+
 class Empresa(BaseModel):
     __tablename__ = "empresa"
 
+    # Código curto para seleção rápida na entrada (ex.: "001").
+    codigo: Mapped[str | None] = mapped_column(String(10), unique=True)
     tipo: Mapped[TipoPessoa] = mapped_column(
         Enum(TipoPessoa, name="tipo_pessoa", create_type=False), nullable=False
     )
@@ -89,6 +109,25 @@ class Empresa(BaseModel):
     usuarios: Mapped[list["UsuarioEmpresa"]] = relationship(
         "UsuarioEmpresa", back_populates="empresa", lazy="noload"
     )
+
+
+class EmpresaDominio(BaseModel):
+    __tablename__ = "empresa_dominio"
+    __table_args__ = (UniqueConstraint("empresa_id", "dominio", name="uq_empresa_dominio"),)
+
+    empresa_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("empresa.id", ondelete="CASCADE"), nullable=False
+    )
+    dominio: Mapped[DominioSistema] = mapped_column(
+        Enum(
+            DominioSistema,
+            name="dominio_sistema",
+            create_type=False,
+            values_callable=lambda obj: [e.value for e in obj],
+        ),
+        nullable=False,
+    )
+    habilitado: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
 
 class UsuarioEmpresa(BaseModel):

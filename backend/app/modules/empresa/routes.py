@@ -10,6 +10,8 @@ from app.core.exceptions import ConflictError, DomainError, NotFoundError
 from app.core.storage import StorageProvider, get_storage_provider
 from app.modules.empresa.schemas import (
     EmpresaCreate,
+    EmpresaDominioItem,
+    EmpresaDominiosUpdate,
     EmpresaListItem,
     EmpresaResponse,
     EmpresaUpdate,
@@ -146,6 +148,36 @@ async def reativar_empresa(
     except DomainError as exc:
         raise _handle_domain(exc) from exc
     return EmpresaResponse.model_validate(empresa)
+
+
+# ── Domínios habilitados por empresa ─────────────────────────────────────────
+
+@router.get("/{empresa_id}/dominios", response_model=list[EmpresaDominioItem])
+async def listar_dominios_empresa(
+    empresa_id: uuid.UUID,
+    usuario_id: CurrentUserId,
+    svc: Annotated[EmpresaService, Depends(_svc)],
+) -> list[EmpresaDominioItem]:
+    try:
+        dominios = await svc.listar_dominios(empresa_id, usuario_id)
+    except DomainError as exc:
+        raise _handle_domain(exc) from exc
+    return [EmpresaDominioItem.model_validate(d) for d in dominios]
+
+
+@router.put("/{empresa_id}/dominios", response_model=list[EmpresaDominioItem])
+async def atualizar_dominios_empresa(
+    empresa_id: uuid.UUID,
+    data: EmpresaDominiosUpdate,
+    _admin: RequireAdminOrGestor,
+    usuario_id: CurrentUserId,
+    svc: Annotated[EmpresaService, Depends(_svc)],
+) -> list[EmpresaDominioItem]:
+    try:
+        dominios = await svc.atualizar_dominios(empresa_id, data.dominios, usuario_id)
+    except DomainError as exc:
+        raise _handle_domain(exc) from exc
+    return [EmpresaDominioItem.model_validate(d) for d in dominios]
 
 
 # ── Associação usuário ↔ empresa ─────────────────────────────────────────────

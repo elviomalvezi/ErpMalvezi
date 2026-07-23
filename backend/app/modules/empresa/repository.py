@@ -1,10 +1,10 @@
 import uuid
 from collections.abc import Sequence
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.empresa.models import Empresa, UsuarioEmpresa
+from app.modules.empresa.models import DominioSistema, Empresa, EmpresaDominio, UsuarioEmpresa
 
 
 class EmpresaRepository:
@@ -81,3 +81,35 @@ class EmpresaRepository:
             )
         )
         return result.scalar_one_or_none()
+
+    async def get_by_codigo(self, codigo: str) -> Empresa | None:
+        result = await self.db.execute(select(Empresa).where(Empresa.codigo == codigo))
+        return result.scalar_one_or_none()
+
+    async def proximo_codigo(self) -> str:
+        """Próximo código sequencial de 3 dígitos ("001", "002", ...)."""
+        result = await self.db.execute(select(Empresa.codigo))
+        numericos = [
+            int(c) for c in result.scalars().all() if c is not None and c.isdigit()
+        ]
+        return f"{(max(numericos) + 1) if numericos else 1:03d}"
+
+    async def list_dominios(self, empresa_id: uuid.UUID) -> Sequence[EmpresaDominio]:
+        result = await self.db.execute(
+            select(EmpresaDominio)
+            .where(EmpresaDominio.empresa_id == empresa_id)
+            .order_by(EmpresaDominio.dominio)
+        )
+        return result.scalars().all()
+
+    async def replace_dominios(
+        self, empresa_id: uuid.UUID, dominios: list[DominioSistema]
+    ) -> None:
+        await self.db.execute(
+            delete(EmpresaDominio).where(EmpresaDominio.empresa_id == empresa_id)
+        )
+        for dominio in dominios:
+            self.db.add(
+                EmpresaDominio(empresa_id=empresa_id, dominio=dominio, habilitado=True)
+            )
+        await self.db.flush()

@@ -4,7 +4,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.modules.empresa.models import RegimeTributario, TipoPessoa
+from app.modules.empresa.models import DominioSistema, RegimeTributario, TipoPessoa
 
 # ─── Campos de endereço reutilizáveis ───────────────────────────────────────
 
@@ -25,6 +25,12 @@ class EnderecoSchema(BaseModel):
 
 class EmpresaCreate(EnderecoSchema):
     tipo: TipoPessoa
+    codigo: str | None = Field(
+        default=None,
+        max_length=10,
+        pattern=r"^[A-Za-z0-9\-]+$",
+        description="Código curto de seleção (ex.: 001). Gerado automaticamente se omitido.",
+    )
     documento: str = Field(..., description="CNPJ (PJ) ou CPF (PF) — apenas dígitos")
     nome_principal: str = Field(..., min_length=2, max_length=200)
     nome_alternativo: str | None = None
@@ -63,6 +69,7 @@ class EmpresaCreate(EnderecoSchema):
 
 class EmpresaUpdate(EnderecoSchema):
     tipo: TipoPessoa | None = None
+    codigo: str | None = Field(default=None, max_length=10, pattern=r"^[A-Za-z0-9\-]+$")
     documento: str | None = None
     nome_principal: str | None = Field(default=None, min_length=2, max_length=200)
     nome_alternativo: str | None = None
@@ -105,6 +112,7 @@ class EmpresaResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    codigo: str | None
     tipo: TipoPessoa
     documento: str | None
     nome_principal: str
@@ -150,6 +158,7 @@ class EmpresaListItem(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+    codigo: str | None
     tipo: TipoPessoa
     documento: str | None
     nome_principal: str
@@ -157,3 +166,16 @@ class EmpresaListItem(BaseModel):
     cor_primaria: str | None
     logo_url: str | None
     ativa: bool
+
+
+class EmpresaDominioItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    dominio: DominioSistema
+    habilitado: bool
+
+
+class EmpresaDominiosUpdate(BaseModel):
+    """Substitui o conjunto de domínios habilitados da empresa."""
+
+    dominios: list[DominioSistema]

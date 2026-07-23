@@ -3,7 +3,13 @@ import uuid
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import ConflictError, DomainError, NotFoundError
-from app.modules.empresa.models import Empresa, TipoPessoa, UsuarioEmpresa
+from app.modules.empresa.models import (
+    DominioSistema,
+    Empresa,
+    EmpresaDominio,
+    TipoPessoa,
+    UsuarioEmpresa,
+)
 from app.modules.empresa.repository import EmpresaRepository
 from app.modules.empresa.schemas import EmpresaCreate, EmpresaUpdate
 from app.modules.empresa.validators import (
@@ -37,7 +43,12 @@ class EmpresaService:
                 "Já existe uma empresa cadastrada com este documento"
             )
 
+        codigo = data.codigo or await self.repo.proximo_codigo()
+        if await self.repo.get_by_codigo(codigo):
+            raise ConflictError(f"Já existe uma empresa com o código {codigo}")
+
         empresa = Empresa(
+            codigo=codigo,
             tipo=data.tipo,
             documento=documento,
             nome_principal=data.nome_principal,
@@ -73,6 +84,10 @@ class EmpresaService:
         vinculo = UsuarioEmpresa(usuario_id=criado_por, empresa_id=empresa.id)
         await self.repo.create_vinculo(vinculo)
 
+        # Empresa nova nasce com os domínios do núcleo atual habilitados.
+        for dominio in (DominioSistema.FINANCEIRO, DominioSistema.CADASTROS):
+            self.db.add(EmpresaDominio(empresa_id=empresa.id, dominio=dominio))
+
         await self.db.commit()
         await self.db.refresh(empresa)
         return empresa
@@ -95,6 +110,12 @@ class EmpresaService:
         empresa = await self.obter(empresa_id, usuario_id)
 
         update_data = data.model_dump(exclude_unset=True)
+
+        novo_codigo = update_data.get("codigo")
+        if novo_codigo is not None and novo_codigo != empresa.codigo:
+            existente_codigo = await self.repo.get_by_codigo(novo_codigo)
+            if existente_codigo and existente_codigo.id != empresa_id:
+                raise ConflictError(f"Já existe uma empresa com o código {novo_codigo}")
 
         novo_tipo = update_data.get("tipo", empresa.tipo)
         novo_doc = update_data.get("documento")
@@ -165,6 +186,25 @@ class EmpresaService:
         await self.db.commit()
         await self.db.refresh(empresa)
         return empresa
+
+    async def listar_dominios(
+        self, empresa_id: uuid.UUID, usuario_id: uuid.UUID
+    ) -> list[EmpresaDominio]:
+        await self.obter(empresa_id, usuario_id)  # valida vínculo
+        return list(await self.repo.list_dominios(empresa_id))
+
+    async def atualizar_dominios(
+        self,
+        empresa_id: uuid.UUID,
+        dominios: list[DominioSistema],
+        usuario_id: uuid.UUID,
+    ) -> list[EmpresaDominio]:
+        await self.obter(empresa_id, usuario_id)
+        if DominioSistema.FINANCEIRO not in dominios:
+            raise DomainError("O domínio Financeiro não pode ser desabilitado.")
+        await self.repo.replace_dominios(empresa_id, dominios)
+        await self.db.commit()
+        return list(await self.repo.list_dominios(empresa_id))
 
     async def reativar(self, empresa_id: uuid.UUID, usuario_id: uuid.UUID) -> Empresa:
         empresa = await self.obter(empresa_id, usuario_id)
